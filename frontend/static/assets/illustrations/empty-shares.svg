@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="180" viewBox="0 0 240 180" fill="none">
+  <circle cx="120" cy="90" r="65" fill="#1E6FD9" fill-opacity="0.05"/>
+  <!-- Link chain -->
+  <path d="M78 115 L98 95 A14 14 0 0 1 118 95 L124 101 A14 14 0 0 1 124 121 L104 141 A14 14 0 0 1 84 141 L78 135 A14 14 0 0 1 78 115 Z" stroke="#1E6FD9" stroke-width="3" stroke-linecap="round" fill="#1E6FD9" fill-opacity="0.08"/>
+  <path d="M116 109 L136 89 A14 14 0 0 1 156 89 L162 95 A14 14 0 0 1 162 115 L142 135 A14 14 0 0 1 122 135 L116 129 A14 14 0 0 1 116 109 Z" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round" fill="#2DD4BF" fill-opacity="0.1"/>
+  <!-- Person silhouette -->
+  <circle cx="150" cy="52" r="14" stroke="#1E6FD9" stroke-width="2.5" fill="#1E6FD9" fill-opacity="0.12"/>
+  <path d="M126 82 C126 71 137 68 150 68 C163 68 174 71 174 82" stroke="#1E6FD9" stroke-width="2.5" stroke-linecap="round" fill="#1E6FD9" fill-opacity="0.08"/>
+  <!-- Decorative dots -->
+  <circle cx="58" cy="80" r="2.5" fill="#2DD4BF" fill-opacity="0.6"/>
+  <circle cx="190" cy="75" r="3" fill="#1E6FD9" fill-opacity="0.5"/>
+</svg>

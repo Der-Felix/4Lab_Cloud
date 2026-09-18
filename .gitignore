@@ -1,0 +1,41 @@
+# Build-Artefakte
+target/
+dist/
+build/
+*.exe
+
+# Node
+node_modules/
+.pnpm-store/
+npm-debug.log*
+
+# Podman / Daten
+data/
+volumes/
+*.pid
+
+# Secrets - NIEMALS committen
+.env
+.env.local
+*.key
+*.pem
+secrets/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+deploy/podman/certs/*.pem
+deploy/podman/certs/*.key
+
+# Backups & Logs
+backups/
+*.log
+
+# Temp & Assistant Cache
+.gemini/
+scratch/
+
+
