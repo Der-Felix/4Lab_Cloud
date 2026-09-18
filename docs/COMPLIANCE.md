@@ -44,3 +44,10 @@ Um unbefugte Datenzugriffe nachzuweisen, protokolliert der Go-App-Server relevan
 - **Lokale Schriftarten**: Alle Schriftarten (Inter, Great Vibes, Playfair Display) sind über NPM (`@fontsource/*`) gebündelt und erfordern keinen Zugriff auf Google Fonts.
 - **Kein Tracking**: Keine Einbindung von Google Analytics, Matomo, Werbenetzwerken oder externen Gravatar-Servern.
 - **EU/EWR Hosting**: Sämtliche Server und Speichermedien können in eigener Hoheit auf On-Premises-Hardware betrieben werden. Bei Dienstleisterbetrieb ist ein Standard-Vertrag zur Auftragsverarbeitung (AVV nach Art. 28 DSGVO) abzuschließen.
+
+### 4.1 OpenStreetMap-Kartenkacheln & Geodaten (Art. 6 Abs. 1 lit. f DSGVO)
+- **Kartenanzeige**: Für die interaktive Kartenansicht (`/photos/map`) und das Dashboard-Vorschau-Widget werden Kartenkacheln von OpenStreetMap (`tile.openstreetmap.org`) abgerufen.
+- **IP-Übermittlung**: Beim Abruf der Kacheln wird aus technischen Gründen die IP-Adresse des Browsers an die OpenStreetMap Foundation übertragen.
+- **Transparenz & Attribution**: Die Benutzeroberfläche blendet auf jeder Karte ein klares Hinweis-Banner ein (*"Kartenkacheln von OpenStreetMap"*) und führt die zwingend vorgeschriebene Attribution *„© OpenStreetMap contributors“* gut sichtbar auf.
+- **Datensparsamkeit & GPS-Opt-Out**: Benutzer können das Speichern und Auswerten von GPS-Koordinaten in den Benutzereinstellungen (`store_gps: false`) jederzeit mit sofortiger Wirkung deaktivieren (Privacy by Default konfigurierbar).
+

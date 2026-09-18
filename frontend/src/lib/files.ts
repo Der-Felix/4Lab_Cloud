@@ -10,6 +10,9 @@ export interface FileItem {
 	height?: number;
 	taken_at?: string;
 	created_at: string;
+	location_name?: string | null;
+	gps_lat?: number | null;
+	gps_lon?: number | null;
 }
 
 export interface FileListResponse {

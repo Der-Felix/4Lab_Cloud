@@ -290,8 +290,7 @@ func (h *TagsHandler) ListFilesByTag(c *gin.Context) {
 		}
 
 		rows, err := tx.Query(c.Request.Context(),
-			`SELECT f.id, f.filename, f.size_bytes, coalesce(f.mime_type, 'application/octet-stream'),
-			        f.thumbnail_path, f.width, f.height, f.taken_at, f.created_at
+			`SELECT f.id, f.filename, f.size_bytes, coalesce(f.mime_type, 'application/octet-stream'), f.thumbnail_path, f.width, f.height, f.taken_at, f.created_at, f.location_name, f.gps_lat, f.gps_lon
 			 FROM files f
 			 JOIN file_tags ft ON f.id = ft.file_id
 			 WHERE ft.tag_id = $1
@@ -305,7 +304,7 @@ func (h *TagsHandler) ListFilesByTag(c *gin.Context) {
 
 		for rows.Next() {
 			var f FileItem
-			if err := rows.Scan(&f.ID, &f.Filename, &f.SizeBytes, &f.MimeType, &f.ThumbnailPath, &f.Width, &f.Height, &f.TakenAt, &f.CreatedAt); err != nil {
+			if err := rows.Scan(&f.ID, &f.Filename, &f.SizeBytes, &f.MimeType, &f.ThumbnailPath, &f.Width, &f.Height, &f.TakenAt, &f.CreatedAt, &f.LocationName, &f.GPSLat, &f.GPSLon); err != nil {
 				return err
 			}
 			files = append(files, f)

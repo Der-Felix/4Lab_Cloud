@@ -13,8 +13,11 @@
 	} from '$lib/files';
 	import { listShares, type ShareItem } from '$lib/shares';
 	import { getMyAuditLogs, type AuditLogItem } from '$lib/admin';
-	import { Card, Button, Badge } from '$lib/components/ui';
+	import Card from '$lib/components/ui/Card.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import FileCard from '$lib/components/dashboard/FileCard.svelte';
+	import MapPreview from '$lib/components/dashboard/MapPreview.svelte';
 	import ShareDialog from '$lib/components/ShareDialog.svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import {
@@ -562,6 +565,9 @@
 					{/if}
 				</div>
 			</Card>
+
+			<!-- Karte 4: Fotokarte Vorschau (nur wenn GPS-Fotos vorhanden) -->
+			<MapPreview />
 
 			<!-- Sicherheitsstatus (DSGVO & BSI) -->
 			<div class="p-4 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark card-depth shadow-depth space-y-2.5">

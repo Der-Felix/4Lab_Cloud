@@ -4,17 +4,29 @@
 	import PhotoGrid from '$lib/components/PhotoGrid.svelte';
 	import Lightbox from '$lib/components/Lightbox.svelte';
 	import { Button } from '$lib/components/ui';
-	import { IconUpload, IconSearch, IconAlbum } from '@tabler/icons-svelte';
+	import {
+		IconUpload,
+		IconSearch,
+		IconAlbum,
+		IconMap,
+		IconMapPin,
+		IconCurrentLocation
+	} from '@tabler/icons-svelte';
 
 	let photos = $state<PhotoItem[]>([]);
 	let isLoading = $state(true);
 	let error = $state<string | null>(null);
 
+	// Filter-Zustände
 	let activeFilter = $state<'all' | 'images' | 'videos'>('all');
 	let searchQuery = $state('');
+	let selectedYear = $state<string>('all');
+	let filterWithLocation = $state<boolean>(false);
+	let filterWithGps = $state<boolean>(false);
+
 	let page = $state(1);
 	let total = $state(0);
-	let limit = $state(60);
+	let limit = $state(100);
 
 	let selectedPhotoIndex = $state<number | null>(null);
 
@@ -52,8 +64,46 @@
 		loadPhotos(true);
 	}
 
+	// Dynamische Jahre aus allen geladenen Fotos ermitteln
+	let availableYears = $derived.by(() => {
+		const years = new Set<string>();
+		for (const p of photos) {
+			const d = p.taken_at || p.created_at;
+			if (d) {
+				const year = new Date(d).getFullYear();
+				if (!isNaN(year)) years.add(String(year));
+			}
+		}
+		return Array.from(years).sort((a, b) => Number(b) - Number(a));
+	});
+
+	// Gefilterte Fotos nach Jahr, Ort und GPS
+	let filteredPhotos = $derived.by(() => {
+		return photos.filter((p) => {
+			// 1. Jahr-Filter
+			if (selectedYear !== 'all') {
+				const d = p.taken_at || p.created_at;
+				if (!d) return false;
+				const y = String(new Date(d).getFullYear());
+				if (y !== selectedYear) return false;
+			}
+
+			// 2. Mit Ort (location_name vorhanden)
+			if (filterWithLocation) {
+				if (!p.location_name || p.location_name.trim() === '') return false;
+			}
+
+			// 3. Mit GPS (gps_lat vorhanden)
+			if (filterWithGps) {
+				if (p.gps_lat === null || p.gps_lat === undefined) return false;
+			}
+
+			return true;
+		});
+	});
+
 	function openLightbox(photo: PhotoItem) {
-		const idx = photos.findIndex((p) => p.id === photo.id);
+		const idx = filteredPhotos.findIndex((p) => p.id === photo.id);
 		if (idx !== -1) {
 			selectedPhotoIndex = idx;
 		}
@@ -70,11 +120,16 @@
 		<div>
 			<h1 class="text-2xl font-bold tracking-tight text-text-light dark:text-text-dark">Fotos & Medien</h1>
 			<p class="text-xs sm:text-sm text-muted-light dark:text-muted-dark mt-1">
-				DSGVO-konforme Galerie mit automatischer EXIF-Bereinigung und RLS-Schutz.
+				DSGVO-konforme Galerie mit hierarchischer Timeline, automatischer EXIF-Auslesung und RLS-Schutz.
 			</p>
 		</div>
 
 		<div class="flex items-center gap-2.5">
+			<Button href="/photos/map" variant="secondary" size="sm">
+				<IconMap size={16} stroke={1.75} class="mr-1.5 text-accent" />
+				<span>Karte</span>
+			</Button>
+
 			<Button href="/photos/albums" variant="secondary" size="sm">
 				<IconAlbum size={16} stroke={1.75} class="mr-1.5" />
 				<span>Alben</span>
@@ -88,53 +143,97 @@
 	</div>
 
 	<!-- Filter- und Suchleiste -->
-	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-		<!-- Filter Tabs -->
-		<div class="flex items-center gap-1 bg-slate-100 dark:bg-surface-dark p-1 rounded-xl border border-border-light dark:border-border-dark">
+	<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+		<!-- Linke Filtergruppe (Typ-Tabs, Jahr-Dropdown, Toggles) -->
+		<div class="flex flex-wrap items-center gap-2.5">
+			<!-- Filter Tabs (Medientyp) -->
+			<div class="flex items-center gap-1 bg-slate-100 dark:bg-surface-dark p-1 rounded-xl border border-border-light dark:border-border-dark">
+				<button
+					type="button"
+					class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer {
+						activeFilter === 'all'
+							? 'bg-primary text-white shadow-xs'
+							: 'text-muted-light dark:text-muted-dark hover:text-text-light dark:hover:text-text-dark'
+					}"
+					onclick={() => handleFilterChange('all')}
+				>
+					Alle Medien
+				</button>
+				<button
+					type="button"
+					class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer {
+						activeFilter === 'images'
+							? 'bg-primary text-white shadow-xs'
+							: 'text-muted-light dark:text-muted-dark hover:text-text-light dark:hover:text-text-dark'
+					}"
+					onclick={() => handleFilterChange('images')}
+				>
+					Nur Fotos
+				</button>
+				<button
+					type="button"
+					class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer {
+						activeFilter === 'videos'
+							? 'bg-primary text-white shadow-xs'
+							: 'text-muted-light dark:text-muted-dark hover:text-text-light dark:hover:text-text-dark'
+					}"
+					onclick={() => handleFilterChange('videos')}
+				>
+					Videos
+				</button>
+			</div>
+
+			<!-- Jahr-Dropdown -->
+			<select
+				bind:value={selectedYear}
+				class="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 py-1.5 text-xs text-text-light dark:text-text-dark focus:outline-hidden focus:border-primary cursor-pointer shadow-xs"
+			>
+				<option value="all">Alle Jahre</option>
+				{#each availableYears as year}
+					<option value={year}>{year}</option>
+				{/each}
+			</select>
+
+			<!-- Toggle: Mit Ort -->
 			<button
 				type="button"
-				class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer {
-					activeFilter === 'all'
-						? 'bg-primary text-white shadow-xs'
-						: 'text-muted-light dark:text-muted-dark hover:text-text-light dark:hover:text-text-dark'
+				onclick={() => (filterWithLocation = !filterWithLocation)}
+				class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer shadow-xs {
+					filterWithLocation
+						? 'bg-accent/15 text-accent border-accent/40 font-semibold'
+						: 'border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:text-text-light dark:hover:text-text-dark bg-surface-light dark:bg-surface-dark'
 				}"
-				onclick={() => handleFilterChange('all')}
+				title="Nur Fotos mit erkanntem Standort"
 			>
-				Alle Medien
+				<IconMapPin size={14} stroke={1.75} />
+				<span>Mit Ort</span>
 			</button>
+
+			<!-- Toggle: Mit GPS -->
 			<button
 				type="button"
-				class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer {
-					activeFilter === 'images'
-						? 'bg-primary text-white shadow-xs'
-						: 'text-muted-light dark:text-muted-dark hover:text-text-light dark:hover:text-text-dark'
+				onclick={() => (filterWithGps = !filterWithGps)}
+				class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer shadow-xs {
+					filterWithGps
+						? 'bg-accent/15 text-accent border-accent/40 font-semibold'
+						: 'border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:text-text-light dark:hover:text-text-dark bg-surface-light dark:bg-surface-dark'
 				}"
-				onclick={() => handleFilterChange('images')}
+				title="Nur Fotos mit GPS-Koordinaten"
 			>
-				Nur Fotos
-			</button>
-			<button
-				type="button"
-				class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer {
-					activeFilter === 'videos'
-						? 'bg-primary text-white shadow-xs'
-						: 'text-muted-light dark:text-muted-dark hover:text-text-light dark:hover:text-text-dark'
-				}"
-				onclick={() => handleFilterChange('videos')}
-			>
-				Videos
+				<IconCurrentLocation size={14} stroke={1.75} />
+				<span>Mit GPS</span>
 			</button>
 		</div>
 
 		<!-- Dateinamensuche -->
-		<div class="relative w-full sm:w-64">
+		<div class="relative w-full lg:w-64">
 			<IconSearch size={16} stroke={1.75} class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark pointer-events-none" />
 			<input
 				type="text"
 				bind:value={searchQuery}
 				oninput={handleSearchInput}
 				placeholder="Fotos suchen..."
-				class="w-full rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3.5 py-1.5 pl-9 text-xs text-text-light dark:text-text-dark placeholder-muted-light dark:placeholder-muted-dark focus:outline-hidden focus:border-primary transition-all"
+				class="w-full rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3.5 py-1.5 pl-9 text-xs text-text-light dark:text-text-dark placeholder-muted-light dark:placeholder-muted-dark focus:outline-hidden focus:border-primary transition-all shadow-xs"
 			/>
 		</div>
 	</div>
@@ -151,14 +250,14 @@
 			{error}
 		</div>
 	{:else}
-		<PhotoGrid {photos} onSelectPhoto={openLightbox} />
+		<PhotoGrid photos={filteredPhotos} onSelectPhoto={openLightbox} />
 	{/if}
 </div>
 
 <!-- Lightbox Modal -->
-{#if selectedPhotoIndex !== null}
+{#if selectedPhotoIndex !== null && filteredPhotos[selectedPhotoIndex]}
 	<Lightbox
-		{photos}
+		photos={filteredPhotos}
 		currentIndex={selectedPhotoIndex}
 		onClose={closeLightbox}
 	/>

@@ -140,7 +140,7 @@ export async function getAlbumFiles(tagId: string): Promise<AlbumResponse> {
 	return api<AlbumResponse>(`/tags/${tagId}/files`);
 }
 
-// Gruppiert Fotos chronologisch nach Aufnahmedatum oder Upload-Datum
+// Gruppiert Fotos chronologisch nach Aufnahmedatum oder Upload-Datum (Alte Logik)
 export function groupPhotosByDate(photos: PhotoItem[]): PhotoGroup[] {
 	const groupsMap = new Map<string, PhotoItem[]>();
 
@@ -180,3 +180,125 @@ export function groupPhotosByDate(photos: PhotoItem[]): PhotoGroup[] {
 
 	return groups;
 }
+
+// Hierarchische Timeline-Struktur (Monat -> Tage -> Fotos)
+export interface TimelineDay {
+	date: string;       // "18. Sep"
+	rawDate: string;    // "2026-09-18"
+	photos: PhotoItem[];
+}
+
+export interface TimelineMonth {
+	month: string;      // "September 2026"
+	rawMonth: string;   // "2026-09"
+	days: TimelineDay[];
+}
+
+// Gruppiert Fotos hierarchisch nach Monat und Tag
+export function groupByTimeline(photos: PhotoItem[]): TimelineMonth[] {
+	if (!photos || photos.length === 0) {
+		return [];
+	}
+
+	// 1. Fotos chronologisch absteigend sortieren
+	const sorted = [...photos].sort((a, b) => {
+		const dateA = new Date(a.taken_at || a.created_at).getTime() || 0;
+		const dateB = new Date(b.taken_at || b.created_at).getTime() || 0;
+		return dateB - dateA;
+	});
+
+	// 2. Maps fuer geordnete Hierarchie (Key: YYYY-MM -> Key: YYYY-MM-DD -> PhotoItem[])
+	const monthsMap = new Map<string, { label: string; daysMap: Map<string, { label: string; photos: PhotoItem[] }> }>();
+
+	for (const photo of sorted) {
+		const rawDate = photo.taken_at || photo.created_at;
+		const dateObj = rawDate ? new Date(rawDate) : null;
+		const isValid = dateObj && !isNaN(dateObj.getTime());
+
+		const monthKey = isValid
+			? `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`
+			: 'unbekannt';
+
+		const monthLabel = isValid
+			? `${dateObj.toLocaleDateString('de-DE', { month: 'long' })} ${dateObj.getFullYear()}`
+			: 'Unbekannt';
+
+		const dayKey = isValid
+			? dateObj.toISOString().slice(0, 10)
+			: 'unbekannt';
+
+		const dayLabel = isValid
+			? `${dateObj.getDate()}. ${dateObj.toLocaleDateString('de-DE', { month: 'short' }).replace('.', '')}`
+			: 'Unbekannt';
+
+		if (!monthsMap.has(monthKey)) {
+			monthsMap.set(monthKey, { label: monthLabel, daysMap: new Map() });
+		}
+
+		const monthEntry = monthsMap.get(monthKey)!;
+		if (!monthEntry.daysMap.has(dayKey)) {
+			monthEntry.daysMap.set(dayKey, { label: dayLabel, photos: [] });
+		}
+
+		monthEntry.daysMap.get(dayKey)!.photos.push(photo);
+	}
+
+	// 3. In hierarchische Arrays konvertieren
+	const result: TimelineMonth[] = [];
+	for (const [rawMonth, { label: monthLabel, daysMap }] of monthsMap.entries()) {
+		const days: TimelineDay[] = [];
+		for (const [rawDate, { label: dayLabel, photos: dayPhotos }] of daysMap.entries()) {
+			days.push({
+				date: dayLabel,
+				rawDate,
+				photos: dayPhotos
+			});
+		}
+		result.push({
+			month: monthLabel,
+			rawMonth,
+			days
+		});
+	}
+
+	return result;
+}
+
+// Hilfsfunktionen zur EXIF-Formatierung
+export function formatAperture(fNumber?: string | null): string {
+	if (!fNumber) return '';
+	const clean = fNumber.trim();
+	if (clean.toLowerCase().startsWith('f/')) return clean;
+	return `f/${clean}`;
+}
+
+export function formatExposure(exposure?: string | null): string {
+	if (!exposure) return '';
+	const clean = exposure.trim();
+	if (clean.endsWith('s')) return clean;
+	return `${clean}s`;
+}
+
+export function formatFocalLength(focal?: string | null): string {
+	if (!focal) return '';
+	const clean = focal.trim();
+	if (clean.toLowerCase().endsWith('mm')) return clean;
+	return `${clean} mm`;
+}
+
+export function formatISO(iso?: number | string | null): string {
+	if (!iso) return '';
+	const clean = String(iso).trim();
+	if (clean.toUpperCase().startsWith('ISO')) return clean;
+	return `ISO ${clean}`;
+}
+
+export function formatCoordinates(lat?: number | null, lon?: number | null): string {
+	if (lat === undefined || lat === null || lon === undefined || lon === null) {
+		return '';
+	}
+	const latCard = lat >= 0 ? 'N' : 'S';
+	const lonCard = lon >= 0 ? 'E' : 'W';
+	return `${Math.abs(lat).toFixed(4)}° ${latCard}, ${Math.abs(lon).toFixed(4)}° ${lonCard}`;
+}
+

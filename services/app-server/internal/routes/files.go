@@ -34,6 +34,9 @@ type FileItem struct {
 	Height        *int       `json:"height,omitempty"`
 	TakenAt       *time.Time `json:"taken_at,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
+	LocationName  *string    `json:"location_name,omitempty"`
+	GPSLat        *float64   `json:"gps_lat,omitempty"`
+	GPSLon        *float64   `json:"gps_lon,omitempty"`
 }
 
 // FileListResponse enthaelt paginierte Dateilisten.
@@ -159,7 +162,7 @@ func (h *FilesHandler) List(c *gin.Context) {
 
 		// 3. Daten abfragen inkl. Thumbnail- und EXIF-Spalten
 		dataQuery := fmt.Sprintf(
-			"SELECT id, filename, size_bytes, coalesce(mime_type, 'application/octet-stream'), thumbnail_path, width, height, taken_at, created_at FROM files WHERE %s ORDER BY %s %s LIMIT %d OFFSET %d",
+			"SELECT id, filename, size_bytes, coalesce(mime_type, 'application/octet-stream'), thumbnail_path, width, height, taken_at, created_at, location_name, gps_lat, gps_lon FROM files WHERE %s ORDER BY %s %s LIMIT %d OFFSET %d",
 			whereSQL, sortField, orderDir, limit, offset,
 		)
 
@@ -171,7 +174,7 @@ func (h *FilesHandler) List(c *gin.Context) {
 
 		for rows.Next() {
 			var f FileItem
-			if err := rows.Scan(&f.ID, &f.Filename, &f.SizeBytes, &f.MimeType, &f.ThumbnailPath, &f.Width, &f.Height, &f.TakenAt, &f.CreatedAt); err != nil {
+			if err := rows.Scan(&f.ID, &f.Filename, &f.SizeBytes, &f.MimeType, &f.ThumbnailPath, &f.Width, &f.Height, &f.TakenAt, &f.CreatedAt, &f.LocationName, &f.GPSLat, &f.GPSLon); err != nil {
 				return err
 			}
 			files = append(files, f)
