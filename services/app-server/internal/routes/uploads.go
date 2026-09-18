@@ -65,6 +65,9 @@ type RustThumbnailResponse struct {
 	Height        int             `json:"height"`
 	TakenAt       *time.Time      `json:"taken_at"`
 	ExifJSON      json.RawMessage `json:"exif_json"`
+	GPSLat        *float64        `json:"gps_lat"`
+	GPSLon        *float64        `json:"gps_lon"`
+	LocationName  *string         `json:"location_name"`
 }
 
 // detectMimeType ermittelt den MIME-Typ anhand der Dateiendung.
@@ -296,13 +299,22 @@ func (h *UploadsHandler) Complete(c *gin.Context) {
 		height        *int
 		takenAt       *time.Time
 		exifJSON      []byte
+		gpsLat        *float64
+		gpsLon        *float64
+		locationName  *string
 	)
 
 	if strings.HasPrefix(mimeType, "image/") {
+		// Pruefen, ob Nutzer GPS-Speicherung erlaubt
+		var storeGPS bool = true
+		_ = h.dbPool.QueryRow(c.Request.Context(), "SELECT store_gps FROM users WHERE id = $1", userID).Scan(&storeGPS)
+
 		thumbURL := fmt.Sprintf("%s/internal/thumbs/%s", h.uploadServiceURL, req.UploadID.String())
 		thumbReqPayload := map[string]any{
 			"storage_path": statusResp.StoragePath,
-			"extract_exif": false, // DSGVO Art. 5 Datensparsamkeit: EXIF standardmaessig deaktiviert
+			"extract_exif": true,
+			"store_gps":    storeGPS,
+			"user_id":      userID,
 		}
 		if reqBody, err := json.Marshal(thumbReqPayload); err == nil {
 			if tReq, err := http.NewRequestWithContext(c.Request.Context(), http.MethodPost, thumbURL, bytes.NewBuffer(reqBody)); err == nil {
@@ -317,6 +329,9 @@ func (h *UploadsHandler) Complete(c *gin.Context) {
 							width = &tData.Width
 							height = &tData.Height
 							takenAt = tData.TakenAt
+							gpsLat = tData.GPSLat
+							gpsLon = tData.GPSLon
+							locationName = tData.LocationName
 							if len(tData.ExifJSON) > 0 && string(tData.ExifJSON) != "null" {
 								exifJSON = tData.ExifJSON
 							}
@@ -331,11 +346,11 @@ func (h *UploadsHandler) Complete(c *gin.Context) {
 	var newFileID uuid.UUID
 	insertErr := db.WithUserRLS(c.Request.Context(), h.dbPool, userID, func(tx pgx.Tx) error {
 		return tx.QueryRow(c.Request.Context(),
-			`INSERT INTO files (user_id, filename, size_bytes, mime_type, checksum_sha256, storage_path, upload_id, thumbnail_path, width, height, taken_at, exif_json)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			`INSERT INTO files (user_id, filename, size_bytes, mime_type, checksum_sha256, storage_path, upload_id, thumbnail_path, width, height, taken_at, exif_json, gps_lat, gps_lon, location_name)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 			 RETURNING id`,
 			userID, statusResp.Filename, statusResp.SizeBytes, mimeType, *statusResp.Checksum, statusResp.StoragePath, req.UploadID,
-			thumbnailPath, width, height, takenAt, exifJSON,
+			thumbnailPath, width, height, takenAt, exifJSON, gpsLat, gpsLon, locationName,
 		).Scan(&newFileID)
 	})
 

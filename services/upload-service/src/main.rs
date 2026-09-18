@@ -57,10 +57,16 @@ async fn main() {
 
     let port = config.upload_port;
     let active_sessions = tokio::sync::Mutex::new(std::collections::HashMap::new());
+    let geocoding_client = Arc::new(upload_service::geocoding::GeocodingClient::new(
+        config.nominatim_url.clone(),
+        config.geocoding_enabled,
+        Some(db_pool.clone()),
+    ));
     let state = Arc::new(AppState {
         config,
         db_pool,
         active_sessions,
+        geocoding_client,
     });
     let app = create_router(state);
 

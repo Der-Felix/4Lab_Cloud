@@ -35,14 +35,15 @@ async fn setup_app() -> (axum::Router, PathBuf, String, [u8; 32]) {
         exports_dir,
         database_url: db_url,
         max_upload_size: 5368709120,
+        ..Default::default()
     };
 
     let active_sessions = tokio::sync::Mutex::new(std::collections::HashMap::new());
-    let state = Arc::new(AppState {
+    let state = Arc::new(AppState::new_for_test(
         config,
         db_pool,
         active_sessions,
-    });
+    ));
     (create_router(state), temp_dir, service_token, storage_key)
 }
 

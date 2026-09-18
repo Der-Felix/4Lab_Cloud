@@ -235,3 +235,49 @@ export async function apiBlob(path: string, options: RequestOptions = {}): Promi
 
 	return await response.blob();
 }
+
+// Einstellungen & Praeferenzen des Benutzers (DSGVO)
+export interface UserPreferences {
+	store_gps: boolean;
+}
+
+export async function getUserPreferences(): Promise<UserPreferences> {
+	return api<UserPreferences>('/users/me/preferences');
+}
+
+export async function updateUserPreferences(prefs: Partial<UserPreferences>): Promise<UserPreferences> {
+	return api<UserPreferences>('/users/me/preferences', {
+		method: 'PATCH',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(prefs)
+	});
+}
+
+// EXIF- und Standort-Metadaten einer Datei
+export interface FileExifData {
+	file_id: string;
+	exif_json: Record<string, unknown> | null;
+	location_name: string | null;
+	location_address: Record<string, unknown> | null;
+	gps_lat?: number;
+	gps_lon?: number;
+}
+
+export async function getFileExif(fileId: string): Promise<FileExifData> {
+	return api<FileExifData>(`/files/${fileId}/exif`);
+}
+
+// Foto mit GPS fuer die Kartenansicht
+export interface PhotoMapItem {
+	id: string;
+	filename: string;
+	thumb_url: string;
+	gps_lat: number;
+	gps_lon: number;
+	location_name: string | null;
+	taken_at?: string;
+}
+
+export async function getPhotosMap(): Promise<PhotoMapItem[]> {
+	return api<PhotoMapItem[]>('/photos/map');
+}

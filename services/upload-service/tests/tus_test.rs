@@ -33,14 +33,15 @@ async fn setup_test_app() -> Option<(axum::Router, PathBuf, sqlx::PgPool)> {
         exports_dir: storage_dir.join("exports"),
         database_url: db_url,
         max_upload_size: 5368709120,
+        ..Default::default()
     };
 
     let active_sessions = tokio::sync::Mutex::new(std::collections::HashMap::new());
-    let state = Arc::new(AppState {
+    let state = Arc::new(AppState::new_for_test(
         config,
-        db_pool: db_pool.clone(),
+        db_pool.clone(),
         active_sessions,
-    });
+    ));
     Some((create_router(state), storage_dir, db_pool))
 }
 

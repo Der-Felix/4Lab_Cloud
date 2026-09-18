@@ -610,3 +610,65 @@ func (h *UserHandler) GetQuota(c *gin.Context) {
 	})
 }
 
+// UserPreferencesResponse enthaelt die Datenschutzeinstellungen des Benutzers.
+type UserPreferencesResponse struct {
+	StoreGPS bool `json:"store_gps"`
+}
+
+// UpdatePreferencesRequest definiert zu aendernde Benutzereinstellungen.
+type UpdatePreferencesRequest struct {
+	StoreGPS *bool `json:"store_gps" binding:"required"`
+}
+
+// GetPreferences liefert die aktuellen Einstellungen des Benutzers.
+func (h *UserHandler) GetPreferences(c *gin.Context) {
+	userID := auth.MustGetUserID(c)
+	if userID == uuid.Nil {
+		return
+	}
+
+	var storeGPS bool
+	err := h.dbPool.QueryRow(c.Request.Context(), "SELECT store_gps FROM users WHERE id = $1", userID).Scan(&storeGPS)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Einstellungen konnten nicht geladen werden"})
+		return
+	}
+
+	c.JSON(http.StatusOK, UserPreferencesResponse{StoreGPS: storeGPS})
+}
+
+// UpdatePreferences aktualisiert die Einstellungen (z.B. GPS-Opt-out).
+func (h *UserHandler) UpdatePreferences(c *gin.Context) {
+	userID := auth.MustGetUserID(c)
+	if userID == uuid.Nil {
+		return
+	}
+
+	var req UpdatePreferencesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültige Eingabedaten"})
+		return
+	}
+
+	_, err := h.dbPool.Exec(c.Request.Context(),
+		"UPDATE users SET store_gps = $1, updated_at = now() WHERE id = $2",
+		*req.StoreGPS, userID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Einstellungen konnten nicht gespeichert werden"})
+		return
+	}
+
+	if h.auditLogger != nil {
+		h.auditLogger.Log(c.Request.Context(), audit.Entry{
+			UserID:   &userID,
+			Action:   "update_preferences",
+			TargetID: &userID,
+			IP:       c.ClientIP(),
+			Result:   "ok",
+		})
+	}
+
+	c.JSON(http.StatusOK, UserPreferencesResponse{StoreGPS: *req.StoreGPS})
+}
+

@@ -14,6 +14,25 @@ pub struct Config {
     pub exports_dir: PathBuf,
     pub database_url: String,
     pub max_upload_size: i64,
+    pub geocoding_enabled: bool,
+    pub nominatim_url: String,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            upload_port: 8081,
+            service_token: "test-service-token".to_string(),
+            storage_key: [0u8; 32],
+            storage_dir: PathBuf::from("/tmp/storage"),
+            thumbs_dir: PathBuf::from("/tmp/thumbs"),
+            exports_dir: PathBuf::from("/tmp/exports"),
+            database_url: "postgres://localhost/4labscloud".to_string(),
+            max_upload_size: 5368709120,
+            geocoding_enabled: false,
+            nominatim_url: "http://nominatim:8080".to_string(),
+        }
+    }
 }
 
 impl Config {
@@ -81,6 +100,13 @@ impl Config {
             }
         };
 
+        let geocoding_enabled = std::env::var("GEOCODING_ENABLED")
+            .map(|v| v.trim().eq_ignore_ascii_case("true") || v.trim() == "1")
+            .unwrap_or(false);
+
+        let nominatim_url = std::env::var("NOMINATIM_URL")
+            .unwrap_or_else(|_| "http://nominatim:8080".to_string());
+
         Ok(Self {
             upload_port,
             service_token,
@@ -90,6 +116,8 @@ impl Config {
             exports_dir,
             database_url,
             max_upload_size,
+            geocoding_enabled,
+            nominatim_url,
         })
     }
 }

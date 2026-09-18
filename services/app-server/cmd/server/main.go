@@ -149,6 +149,9 @@ func main() {
 		v1.GET("/files", filesHandler.List)
 		v1.GET("/files/:id/download", filesHandler.Download)
 		v1.GET("/files/:id/thumbnail", filesHandler.Thumbnail)
+		v1.GET("/files/:id/thumb", filesHandler.Thumbnail)
+		v1.GET("/files/:id/exif", filesHandler.GetFileExif)
+		v1.GET("/photos/map", filesHandler.GetPhotosMap)
 		v1.DELETE("/files/:id", filesHandler.Delete)
 		v1.PATCH("/files/:id", filesHandler.Rename)
 		v1.POST("/files/:id/share", filesHandler.CreateShare)
@@ -167,9 +170,11 @@ func main() {
 		v1.DELETE("/auth/sessions/:id", authHandler.RevokeSession)
 		v1.DELETE("/auth/sessions", authHandler.RevokeOtherSessions)
 
-		// DSGVO Account-Loeschung, Quota und Datenexport
+		// DSGVO Account-Loeschung, Quota, Einstellungen und Datenexport
 		v1.DELETE("/users/me", userHandler.DeleteMe)
 		v1.GET("/users/me/quota", userHandler.GetQuota)
+		v1.GET("/users/me/preferences", userHandler.GetPreferences)
+		v1.PATCH("/users/me/preferences", userHandler.UpdatePreferences)
 		v1.POST("/users/me/export", userHandler.RequestExport)
 		v1.GET("/users/me/export/:job_id", userHandler.GetExportStatus)
 		v1.GET("/users/me/export/:job_id/download", userHandler.DownloadExport)

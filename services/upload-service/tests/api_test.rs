@@ -32,10 +32,11 @@ async fn setup_test_app() -> Option<axum::Router> {
         exports_dir: storage_dir.join("exports"),
         database_url: db_url,
         max_upload_size: 5368709120,
+        ..Default::default()
     };
 
     let active_sessions = tokio::sync::Mutex::new(std::collections::HashMap::new());
-    let state = Arc::new(AppState { config, db_pool, active_sessions });
+    let state = Arc::new(AppState::new_for_test(config, db_pool, active_sessions));
     Some(create_router(state))
 }
 

@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { currentUser, addToast } from '$lib/stores';
 	import { isAdmin } from '$lib/auth';
+	import { getUserPreferences, updateUserPreferences } from '$lib/api';
 	import { Card, Button, Input, Badge } from '$lib/components/ui';
 	import SessionsList from '$lib/components/settings/SessionsList.svelte';
 	import DataExport from '$lib/components/settings/DataExport.svelte';
@@ -15,11 +17,45 @@
 		IconFileText,
 		IconSettings,
 		IconKey,
-		IconCircleCheck
+		IconCircleCheck,
+		IconMapPin
 	} from '@tabler/icons-svelte';
 
 	type TabType = 'profile' | 'security' | 'gdpr' | 'admin';
 	let activeTab = $state<TabType>('profile');
+
+	// GPS-Datenschutz Praeferenzen
+	let storeGPS = $state(true);
+	let isUpdatingGPS = $state(false);
+	let isLoadingPreferences = $state(true);
+
+	onMount(async () => {
+		try {
+			const prefs = await getUserPreferences();
+			storeGPS = prefs.store_gps;
+		} catch (err) {
+			console.error('Fehler beim Laden der Einstellungen:', err);
+		} finally {
+			isLoadingPreferences = false;
+		}
+	});
+
+	async function handleToggleGPS() {
+		isUpdatingGPS = true;
+		const nextState = !storeGPS;
+		try {
+			const res = await updateUserPreferences({ store_gps: nextState });
+			storeGPS = res.store_gps;
+			addToast(
+				storeGPS ? 'GPS-Standortdaten werden gespeichert' : 'GPS-Standortdaten werden gestrippt',
+				'success'
+			);
+		} catch (err: unknown) {
+			addToast('Einstellungen konnten nicht aktualisiert werden', 'error');
+		} finally {
+			isUpdatingGPS = false;
+		}
+	}
 
 	// Passwort aendern (Profil-Tab)
 	let currentPassword = $state('');
@@ -150,6 +186,35 @@
 					<div class="flex items-center justify-between py-2">
 						<span class="text-muted-light dark:text-muted-dark">Benutzer-ID</span>
 						<span class="font-mono text-muted-light dark:text-muted-dark tabular-nums">{$currentUser?.id || '—'}</span>
+					</div>
+				</div>
+			</Card>
+
+			<Card title="Datenschutz & Standortdaten" description="Verwaltung von EXIF- und Geodaten beim Foto-Upload">
+				<div class="space-y-3 text-xs">
+					<div class="flex items-center justify-between py-2">
+						<div class="space-y-1 pr-4">
+							<div class="flex items-center gap-1.5 font-medium text-text-light dark:text-text-dark">
+								<IconMapPin size={16} class="text-primary" />
+								<span>GPS-Standortdaten in Fotos speichern</span>
+							</div>
+							<p class="text-muted-light dark:text-muted-dark leading-relaxed">
+								Liest Koordinaten aus Bild-Metadaten aus, um Aufnahmeorte via Self-Hosted Reverse-Geocoding automatisch zu erkennen. Wenn deaktiviert, werden GPS-Daten vor dem Speichern unwiderruflich entfernt.
+							</p>
+						</div>
+						<button
+							type="button"
+							role="switch"
+							aria-label="GPS-Standortdaten in Fotos speichern"
+							aria-checked={storeGPS}
+							disabled={isUpdatingGPS || isLoadingPreferences}
+							onclick={handleToggleGPS}
+							class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 {storeGPS ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'} disabled:opacity-50"
+						>
+							<span
+								class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {storeGPS ? 'translate-x-5' : 'translate-x-0'}"
+							></span>
+						</button>
 					</div>
 				</div>
 			</Card>

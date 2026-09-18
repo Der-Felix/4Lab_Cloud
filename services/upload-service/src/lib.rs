@@ -14,6 +14,8 @@ pub mod config;
 pub mod crypto;
 pub mod db;
 pub mod error;
+pub mod exif;
+pub mod geocoding;
 pub mod models;
 pub mod routes;
 pub mod storage;
@@ -31,6 +33,41 @@ pub struct AppState {
     pub config: Config,
     pub db_pool: PgPool,
     pub active_sessions: Mutex<HashMap<Uuid, SessionHasher>>,
+    pub geocoding_client: Arc<geocoding::GeocodingClient>,
+}
+
+impl AppState {
+    pub fn new(
+        config: Config,
+        db_pool: PgPool,
+        active_sessions: Mutex<HashMap<Uuid, SessionHasher>>,
+        geocoding_client: Arc<geocoding::GeocodingClient>,
+    ) -> Self {
+        Self {
+            config,
+            db_pool,
+            active_sessions,
+            geocoding_client,
+        }
+    }
+
+    pub fn new_for_test(
+        config: Config,
+        db_pool: PgPool,
+        active_sessions: Mutex<HashMap<Uuid, SessionHasher>>,
+    ) -> Self {
+        let geocoding_client = Arc::new(geocoding::GeocodingClient::new(
+            config.nominatim_url.clone(),
+            config.geocoding_enabled,
+            Some(db_pool.clone()),
+        ));
+        Self {
+            config,
+            db_pool,
+            active_sessions,
+            geocoding_client,
+        }
+    }
 }
 
 /// Erstellt den Axum-Router fuer den Upload-Service.

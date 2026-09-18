@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -123,10 +124,10 @@ func (h *FilesHandler) List(c *gin.Context) {
 	)
 
 	err := db.WithUserRLS(c.Request.Context(), h.dbPool, userID, func(tx pgx.Tx) error {
-		// 1. Where-Bedingungen aufbauen
-		whereClauses := []string{"1=1"}
-		var args []any
-		argIdx := 1
+		// 1. Where-Bedingungen aufbauen (Benutzer-Isolation sicherstellen)
+		whereClauses := []string{"user_id = $1"}
+		args := []any{userID}
+		argIdx := 2
 
 		if filter != "" {
 			whereClauses = append(whereClauses, fmt.Sprintf("filename ILIKE $%d", argIdx))
@@ -218,7 +219,7 @@ func (h *FilesHandler) Download(c *gin.Context) {
 
 	err = db.WithUserRLS(c.Request.Context(), h.dbPool, userID, func(tx pgx.Tx) error {
 		return tx.QueryRow(c.Request.Context(),
-			"SELECT filename, storage_path FROM files WHERE id = $1", fileID).
+			"SELECT filename, storage_path FROM files WHERE id = $1 AND user_id = $2", fileID, userID).
 			Scan(&filename, &storagePath)
 	})
 
@@ -298,7 +299,7 @@ func (h *FilesHandler) Thumbnail(c *gin.Context) {
 	)
 	err = db.WithUserRLS(c.Request.Context(), h.dbPool, userID, func(tx pgx.Tx) error {
 		return tx.QueryRow(c.Request.Context(),
-			"SELECT thumbnail_path, upload_id FROM files WHERE id = $1", fileID).
+			"SELECT thumbnail_path, upload_id FROM files WHERE id = $1 AND user_id = $2", fileID, userID).
 			Scan(&thumbnailPath, &uploadID)
 	})
 
@@ -318,34 +319,38 @@ func (h *FilesHandler) Thumbnail(c *gin.Context) {
 		targetID.String(),
 		url.QueryEscape(*thumbnailPath),
 	)
+
 	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, rustURL, nil)
 	if err != nil {
-		slog.ErrorContext(c.Request.Context(), "fehler beim erstellen der thumbnail-anfrage an rust", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Interner Serverfehler"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Fehler bei interner Anfrage"})
 		return
 	}
 	req.Header.Set("Authorization", "Bearer "+h.serviceToken)
 
 	resp, err := h.httpClient.Do(req)
 	if err != nil {
-		slog.WarnContext(c.Request.Context(), "upload-service bei thumbnail nicht erreichbar", "error", err)
-		c.JSON(http.StatusBadGateway, gin.H{"error": "Storage-Service nicht erreichbar"})
+		slog.Warn("upload-service bei thumbnail nicht erreichbar", "error", err)
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Storage-Dienst nicht erreichbar"})
 		return
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusNotFound {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Thumbnail nicht gefunden"})
+		return
+	}
 	if resp.StatusCode != http.StatusOK {
-		c.JSON(resp.StatusCode, gin.H{"error": "Thumbnail konnte nicht geladen werden"})
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Storage-Dienst meldete Fehler"})
 		return
 	}
 
-	c.Header("Content-Type", "image/jpeg")
+	c.Header("Content-Type", resp.Header.Get("Content-Type"))
 	c.Header("Cache-Control", "private, max-age=86400")
-
+	c.Status(http.StatusOK)
 	_, _ = io.Copy(c.Writer, resp.Body)
 }
 
-// Delete loescht eine Datei gemaess DSGVO Art. 17: Zuerst Rust (physisch), dann DB.
+// Delete loescht eine Datei (DSGVO Art. 17: Hartes Loeschen).
 func (h *FilesHandler) Delete(c *gin.Context) {
 	userID := auth.MustGetUserID(c)
 	if userID == uuid.Nil {
@@ -362,7 +367,7 @@ func (h *FilesHandler) Delete(c *gin.Context) {
 	var storagePath string
 	err = db.WithUserRLS(c.Request.Context(), h.dbPool, userID, func(tx pgx.Tx) error {
 		return tx.QueryRow(c.Request.Context(),
-			"SELECT storage_path FROM files WHERE id = $1", fileID).
+			"SELECT storage_path FROM files WHERE id = $1 AND user_id = $2", fileID, userID).
 			Scan(&storagePath)
 	})
 
@@ -383,19 +388,13 @@ func (h *FilesHandler) Delete(c *gin.Context) {
 		}
 	}
 
-	// 2. Datenbankeintrag loeschen
-	var deleted bool
+	// 2. Metadaten loeschen
 	err = db.WithUserRLS(c.Request.Context(), h.dbPool, userID, func(tx pgx.Tx) error {
-		cmdTag, err := tx.Exec(c.Request.Context(), "DELETE FROM files WHERE id = $1", fileID)
-		if err != nil {
-			return err
-		}
-		deleted = cmdTag.RowsAffected() > 0
-		return nil
+		_, err := tx.Exec(c.Request.Context(), "DELETE FROM files WHERE id = $1 AND user_id = $2", fileID, userID)
+		return err
 	})
-
-	if err != nil || !deleted {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Fehler beim Loeschen aus der Datenbank"})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Metadaten konnten nicht gelöscht werden"})
 		return
 	}
 
@@ -403,7 +402,7 @@ func (h *FilesHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// Rename benennt eine vorhandene Datei um.
+// Rename aendert den Dateinamen.
 func (h *FilesHandler) Rename(c *gin.Context) {
 	userID := auth.MustGetUserID(c)
 	if userID == uuid.Nil {
@@ -419,20 +418,20 @@ func (h *FilesHandler) Rename(c *gin.Context) {
 
 	var req RenameFileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungueltiger Dateiname: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungueltiger Dateiname"})
 		return
 	}
 
 	cleanName := strings.TrimSpace(req.Filename)
-	if cleanName == "" || strings.Contains(cleanName, "/") || strings.Contains(cleanName, "\\") {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Dateiname enthaelt unzulaessige Zeichen"})
+	if cleanName == "" || strings.Contains(cleanName, "..") || strings.Contains(cleanName, "/") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungueltiger Dateiname"})
 		return
 	}
 
 	var updated bool
 	err = db.WithUserRLS(c.Request.Context(), h.dbPool, userID, func(tx pgx.Tx) error {
 		cmdTag, err := tx.Exec(c.Request.Context(),
-			"UPDATE files SET filename = $1 WHERE id = $2", cleanName, fileID)
+			"UPDATE files SET filename = $1 WHERE id = $2 AND user_id = $3", cleanName, fileID, userID)
 		if err != nil {
 			return err
 		}
@@ -635,5 +634,128 @@ func (h *FilesHandler) logAudit(ctx context.Context, userID *uuid.UUID, action s
 			Result:   result,
 		})
 	}
+}
+
+// ExifResponse liefert die extrahierten EXIF- und Standort-Metadaten.
+type ExifResponse struct {
+	FileID          uuid.UUID       `json:"file_id"`
+	ExifJSON        json.RawMessage `json:"exif_json"`
+	LocationName    *string         `json:"location_name"`
+	LocationAddress json.RawMessage `json:"location_address"`
+	GPSLat          *float64        `json:"gps_lat,omitempty"`
+	GPSLon          *float64        `json:"gps_lon,omitempty"`
+}
+
+// GetFileExif liefert EXIF- und Geocoding-Metadaten einer Datei (JWT & RLS geschuetzt).
+func (h *FilesHandler) GetFileExif(c *gin.Context) {
+	userID := auth.MustGetUserID(c)
+	if userID == uuid.Nil {
+		return
+	}
+	fileIDStr := c.Param("id")
+	fileID, err := uuid.Parse(fileIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Ungültige Datei-ID"})
+		return
+	}
+
+	var (
+		exifJSON        []byte
+		locationName    *string
+		locationAddress []byte
+		gpsLat          *float64
+		gpsLon          *float64
+	)
+
+	err = db.WithUserRLS(c.Request.Context(), h.dbPool, userID, func(tx pgx.Tx) error {
+		return tx.QueryRow(c.Request.Context(),
+			`SELECT exif_json, location_name, location_address, gps_lat, gps_lon 
+			 FROM files WHERE id = $1 AND user_id = $2`,
+			fileID, userID,
+		).Scan(&exifJSON, &locationName, &locationAddress, &gpsLat, &gpsLon)
+	})
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Datei nicht gefunden"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Fehler beim Abrufen der EXIF-Daten"})
+		return
+	}
+
+	var exifRaw json.RawMessage
+	if len(exifJSON) > 0 && string(exifJSON) != "null" {
+		exifRaw = json.RawMessage(exifJSON)
+	}
+	var addrRaw json.RawMessage
+	if len(locationAddress) > 0 && string(locationAddress) != "null" {
+		addrRaw = json.RawMessage(locationAddress)
+	}
+
+	c.JSON(http.StatusOK, ExifResponse{
+		FileID:          fileID,
+		ExifJSON:        exifRaw,
+		LocationName:    locationName,
+		LocationAddress: addrRaw,
+		GPSLat:          gpsLat,
+		GPSLon:          gpsLon,
+	})
+}
+
+// PhotoMapItem repraesentiert ein Foto mit Standortdaten fuer die Kartenansicht.
+type PhotoMapItem struct {
+	ID           uuid.UUID  `json:"id"`
+	Filename     string     `json:"filename"`
+	ThumbURL     string     `json:"thumb_url"`
+	GPSLat       float64    `json:"gps_lat"`
+	GPSLon       float64    `json:"gps_lon"`
+	LocationName *string    `json:"location_name"`
+	TakenAt      *time.Time `json:"taken_at,omitempty"`
+}
+
+// GetPhotosMap liefert alle Fotos des Benutzers mit GPS-Koordinaten fuer die Kartenansicht.
+func (h *FilesHandler) GetPhotosMap(c *gin.Context) {
+	userID := auth.MustGetUserID(c)
+	if userID == uuid.Nil {
+		return
+	}
+
+	items := make([]PhotoMapItem, 0)
+	err := db.WithUserRLS(c.Request.Context(), h.dbPool, userID, func(tx pgx.Tx) error {
+		rows, err := tx.Query(c.Request.Context(),
+			`SELECT id, filename, gps_lat, gps_lon, location_name, taken_at
+			 FROM files
+			 WHERE user_id = $1 AND gps_lat IS NOT NULL AND gps_lon IS NOT NULL
+			 ORDER BY taken_at DESC NULLS LAST, created_at DESC`,
+			userID,
+		)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var item PhotoMapItem
+			var lat, lon *float64
+			if err := rows.Scan(&item.ID, &item.Filename, &lat, &lon, &item.LocationName, &item.TakenAt); err != nil {
+				return err
+			}
+			if lat != nil && lon != nil {
+				item.GPSLat = *lat
+				item.GPSLon = *lon
+				item.ThumbURL = fmt.Sprintf("/api/v1/files/%s/thumb", item.ID.String())
+				items = append(items, item)
+			}
+		}
+		return rows.Err()
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Fehler beim Laden der Karten-Fotos"})
+		return
+	}
+
+	c.JSON(http.StatusOK, items)
 }
 

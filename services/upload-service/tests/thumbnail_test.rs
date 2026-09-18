@@ -34,14 +34,15 @@ async fn test_thumbnail_generation_and_retrieval() {
         exports_dir,
         database_url: db_url.to_string(),
         max_upload_size: 5368709120,
+        ..Default::default()
     };
 
     let active_sessions = tokio::sync::Mutex::new(std::collections::HashMap::new());
-    let state = Arc::new(AppState {
+    let state = Arc::new(AppState::new_for_test(
         config,
         db_pool,
         active_sessions,
-    });
+    ));
     let app = create_router(state);
 
     // 1. Ein 800x600 Testbild im PNG-Format im Speicher erzeugen
@@ -136,14 +137,15 @@ async fn test_thumbnail_no_exif_by_default() {
         exports_dir,
         database_url: db_url.to_string(),
         max_upload_size: 5368709120,
+        ..Default::default()
     };
 
     let active_sessions = tokio::sync::Mutex::new(std::collections::HashMap::new());
-    let state = Arc::new(AppState {
+    let state = Arc::new(AppState::new_for_test(
         config,
         db_pool,
         active_sessions,
-    });
+    ));
     let app = create_router(state);
 
     let img = image::RgbImage::new(400, 400);

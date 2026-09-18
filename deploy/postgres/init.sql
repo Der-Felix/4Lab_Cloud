@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     mfa_enabled BOOLEAN NOT NULL DEFAULT false,
     mfa_secret_encrypted BYTEA,
     quota_bytes BIGINT,
+    store_gps BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -70,9 +71,26 @@ CREATE TABLE IF NOT EXISTS files (
     height INTEGER,
     taken_at TIMESTAMPTZ,
     exif_json JSONB,
+    gps_lat DOUBLE PRECISION,
+    gps_lon DOUBLE PRECISION,
+    location_name TEXT,
+    location_address JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_files_user ON files(user_id);
+CREATE INDEX IF NOT EXISTS idx_files_gps ON files(gps_lat, gps_lon) WHERE gps_lat IS NOT NULL;
+
+-- Reverse-Geocoding Cache (Nominatim)
+CREATE TABLE IF NOT EXISTS geocoding_cache (
+    id SERIAL PRIMARY KEY,
+    lat_rounded NUMERIC(6,4) NOT NULL,
+    lon_rounded NUMERIC(6,4) NOT NULL,
+    display_name TEXT NOT NULL,
+    address_json JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (lat_rounded, lon_rounded)
+);
+CREATE INDEX IF NOT EXISTS idx_geocoding_cache_coords ON geocoding_cache(lat_rounded, lon_rounded);
 CREATE INDEX IF NOT EXISTS idx_files_upload_id ON files(upload_id);
 CREATE INDEX IF NOT EXISTS idx_files_taken_at ON files(taken_at);
 

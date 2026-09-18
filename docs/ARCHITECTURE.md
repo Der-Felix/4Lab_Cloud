@@ -156,3 +156,43 @@ Der Go-App-Server setzt vor jeder Transaktion `SET LOCAL app.user_id = '...'`. E
 
 ### Service-to-Service Token
 Der Rust-Upload-Service weist alle Anfragen ohne gültigen `Authorization: Bearer <SERVICE_TOKEN>` Header im isolierten Backend-Netzwerk mit `401 Unauthorized` ab.
+
+---
+
+## 4. EXIF-Vollauslesung & Self-Hosted Reverse-Geocoding (Nominatim)
+
+Für Fotodateien (`image/*`) extrahiert der Rust-Upload-Service Metadaten und reichert Standortinformationen an:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as Browser (Frontend)
+    participant Go as Go App-Server
+    participant Rust as Rust Upload-Service
+    participant DB as PostgreSQL
+    participant Nom as Self-Hosted Nominatim
+
+    Client->>Go: POST /api/v1/uploads/complete
+    Go->>DB: Pruefe users.store_gps
+    Go->>Rust: POST /internal/thumbs/{id} (extract_exif: true, store_gps: bool)
+    Rust->>Rust: Thumbnail generieren & EXIF parsen (kamadak-exif)
+    
+    alt store_gps == false (Datenschutz Opt-out)
+        Rust->>Rust: GPS-Tags aus EXIF strippen
+    else store_gps == true
+        Rust-->>Rust: GPS extrahieren (DMS -> Dezimal)
+        Rust-)Nom: tokio::spawn: Async Reverse-Geocoding (5s Timeout, 1 req/s)
+        Rust-->>DB: UPDATE files SET location_name, location_address
+    end
+
+    Rust-->>Go: Thumbnail & EXIF Response (sofort)
+    Go->>DB: INSERT INTO files (..., gps_lat, gps_lon, exif_json)
+    Go-->>Client: 201 Created (Upload-Complete sofort fertig)
+```
+
+### Kernmerkmale:
+1. **Asynchronität (Non-Blocking)**: Der Upload und die Thumbnail-Erzeugung schließen sofort ab. Geocoding läuft im Hintergrund per `tokio::spawn`.
+2. **Datenschutz & DSGVO Art. 5**: Jeder Nutzer kann über `PATCH /api/v1/users/me/preferences` die GPS-Speicherung deaktivieren (`store_gps: false`). In diesem Fall werden GPS-Metadaten vor der Persistierung vollständig entfernt.
+3. **Self-Hosted & Offline-First**: Kein externer Dienst (kein Google Maps, kein Mapbox). Nominatim läuft als Container `mediagis/nominatim:4.5` im isolierten Backend-Netzwerk.
+4. **Caching & Rate-Limiting**: Abfragen werden in `geocoding_cache` auf 4 Nachkommastellen gerundet gecacht (~11 m Präzision). Nominatim-Anfragen werden auf maximal 1 Request/Sekunde gedrosselt.
+5. **Dev-Profil**: Über `profiles: ["geocoding"]` in `podman-compose.yml` wird der ressourcenintensive Nominatim-Container in der Entwicklungsumgebung nur bei Bedarf gestartet (`--profile geocoding`).

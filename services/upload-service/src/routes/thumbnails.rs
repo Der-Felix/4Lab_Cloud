@@ -7,7 +7,8 @@ use axum::{
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::{io::Cursor, path::PathBuf, sync::Arc};
+use sqlx::Row;
+use std::{path::PathBuf, sync::Arc};
 use uuid::Uuid;
 
 use crate::{error::AppError, storage, AppState};
@@ -16,6 +17,8 @@ use crate::{error::AppError, storage, AppState};
 pub struct GenerateThumbnailRequest {
     pub storage_path: String,
     pub extract_exif: Option<bool>,
+    pub store_gps: Option<bool>,
+    pub user_id: Option<Uuid>,
 }
 
 #[derive(Debug, Serialize)]
@@ -25,6 +28,9 @@ pub struct GenerateThumbnailResponse {
     pub height: u32,
     pub taken_at: Option<chrono::DateTime<Utc>>,
     pub exif_json: Option<serde_json::Value>,
+    pub gps_lat: Option<f64>,
+    pub gps_lon: Option<f64>,
+    pub location_name: Option<String>,
 }
 
 /// Ermittelt den relativen Speicherpfad fuer Thumbnails mit Sharding.
@@ -41,8 +47,8 @@ pub fn get_thumbnail_path(base_dir: &std::path::Path, file_id: Uuid) -> PathBuf 
     base_dir.join(shard).join(format!("{id_str}.enc"))
 }
 
-/// POST /internal/thumbs/{id}: Generiert ein Thumbnail (256x256 max, JPEG Quality 80)
-/// und speichert es verschluesselt ab. EXIF GPS-Daten werden IMMER gestrippt.
+/// POST /internal/thumbs/{id}: Generiert ein Thumbnail (256x256 max, JPEG Quality 80),
+/// extrahiert vollstaendige EXIF-Daten und startet optional asynchrones Reverse-Geocoding.
 pub async fn generate_thumbnail(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -76,44 +82,122 @@ pub async fn generate_thumbnail(
         .encode_image(&thumb)
         .map_err(|e| AppError::Internal(format!("Thumbnail-Kodierung fehlgeschlagen: {e}")))?;
 
-    // EXIF-Metadaten verarbeiten gemaess DSGVO Art. 5 (Datensparsamkeit)
+    // EXIF-Metadaten verarbeiten
     let mut taken_at: Option<chrono::DateTime<Utc>> = None;
     let mut exif_json: Option<serde_json::Value> = None;
+    let mut gps_lat: Option<f64> = None;
+    let mut gps_lon: Option<f64> = None;
 
     if payload.extract_exif == Some(true) {
-        let mut cursor = Cursor::new(&plain_bytes);
-        if let Ok(exif) = exif::Reader::new().read_from_container(&mut cursor) {
-            let mut tags_map = serde_json::Map::new();
+        if let Some(mut exif_data) = crate::exif::extract_exif(&plain_bytes) {
+            // Datenschutz: Pruefen, ob der Nutzer GPS-Speicherung erlaubt hat
+            let store_gps_allowed = match payload.store_gps {
+                Some(allowed) => allowed,
+                None => {
+                    // Falls nicht im Payload uebergeben, aus der Datenbank pruefen
+                    let mut allowed = true;
+                    let row = sqlx::query(
+                        "SELECT u.store_gps FROM users u \
+                         JOIN upload_sessions s ON s.user_id = u.id \
+                         WHERE s.id = $1 LIMIT 1",
+                    )
+                    .bind(id)
+                    .fetch_optional(&state.db_pool)
+                    .await;
 
-            for field in exif.fields() {
-                let tag_name = format!("{}", field.tag);
-
-                // DSGVO Schutz: GPS-Daten IMMER strippen, auch bei aktiviertem EXIF
-                if tag_name.contains("GPS") || tag_name.starts_with("Gps") || tag_name.contains("Serial") {
-                    continue;
-                }
-
-                // Aufnahmedatum extrahieren
-                if (field.tag == exif::Tag::DateTimeOriginal || field.tag == exif::Tag::DateTime)
-                    && taken_at.is_none()
-                {
-                    let val_str = field.display_value().to_string();
-                    // EXIF-Standardformat: "YYYY:MM:DD HH:MM:SS"
-                    if let Ok(naive) =
-                        chrono::NaiveDateTime::parse_from_str(val_str.trim_matches('"'), "%Y:%m:%d %H:%M:%S")
-                    {
-                        taken_at = Some(chrono::DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc));
+                    if let Ok(Some(r)) = row {
+                        allowed = r.get("store_gps");
+                    } else {
+                        let row2 = sqlx::query(
+                            "SELECT u.store_gps FROM users u \
+                             JOIN files f ON f.user_id = u.id \
+                             WHERE f.id = $1 OR f.upload_id = $1 LIMIT 1",
+                        )
+                        .bind(id)
+                        .fetch_optional(&state.db_pool)
+                        .await;
+                        if let Ok(Some(r2)) = row2 {
+                            allowed = r2.get("store_gps");
+                        }
                     }
+                    allowed
                 }
+            };
 
-                let val_str = field.display_value().to_string();
-                let clean_val = val_str.trim_matches('"').to_string();
-                tags_map.insert(tag_name, serde_json::Value::String(clean_val));
+            if !store_gps_allowed {
+                crate::exif::strip_gps(&mut exif_data);
+                tracing::info!(file_id = %id, "GPS-Speicherung durch Benutzer deaktiviert (store_gps = false)");
+            } else if let Some(ref gps) = exif_data.gps {
+                gps_lat = Some(gps.lat);
+                gps_lon = Some(gps.lon);
+                tracing::info!(file_id = %id, lat = gps.lat, lon = gps.lon, "exif extrahiert");
+
+                // Asynchrones Reverse-Geocoding in tokio::spawn starten (blockiert Upload NICHT)
+                if state.geocoding_client.is_enabled() {
+                    let geocoding = state.geocoding_client.clone();
+                    let pool = state.db_pool.clone();
+                    let target_id = id;
+                    let lat = gps.lat;
+                    let lon = gps.lon;
+
+                    tokio::spawn(async move {
+                        tracing::info!(
+                            upload_id = %target_id,
+                            lat = lat,
+                            lon = lon,
+                            "geocoding gestartet (async)"
+                        );
+                        match geocoding.reverse_geocode(lat, lon).await {
+                            Ok(Some(geo)) => {
+                                // Wiederhole Update kurz, falls der Go-Server die files-Zeile zeitgleich einfuegt
+                                for _ in 0..10 {
+                                    let res = sqlx::query(
+                                        "UPDATE files SET location_name = $1, location_address = $2 \
+                                         WHERE upload_id = $3 OR id = $3",
+                                    )
+                                    .bind(&geo.display_name)
+                                    .bind(&geo.address)
+                                    .bind(target_id)
+                                    .execute(&pool)
+                                    .await;
+
+                                    if let Ok(r) = res {
+                                        if r.rows_affected() > 0 {
+                                            tracing::info!(
+                                                upload_id = %target_id,
+                                                location = %geo.display_name,
+                                                "geocoding abgeschlossen: {}",
+                                                geo.display_name
+                                            );
+                                            break;
+                                        }
+                                    }
+                                    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+                                }
+                            }
+                            Ok(None) => {
+                                tracing::debug!(upload_id = %target_id, "geocoding deaktiviert oder kein ergebnis");
+                            }
+                            Err(e) => {
+                                tracing::warn!(
+                                    upload_id = %target_id,
+                                    error = %e,
+                                    "geocoding fehlgeschlagen (upload unbeeinflusst)"
+                                );
+                            }
+                        }
+                    });
+                }
             }
 
-            if !tags_map.is_empty() {
-                exif_json = Some(serde_json::Value::Object(tags_map));
+            // Aufnahmedatum extrahieren
+            if let Some(ref dt_str) = exif_data.datetime_original {
+                if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(dt_str) {
+                    taken_at = Some(parsed.with_timezone(&Utc));
+                }
             }
+
+            exif_json = serde_json::to_value(&exif_data).ok();
         }
     }
 
@@ -138,6 +222,9 @@ pub async fn generate_thumbnail(
         height: orig_height,
         taken_at,
         exif_json,
+        gps_lat,
+        gps_lon,
+        location_name: None,
     }))
 }
 
