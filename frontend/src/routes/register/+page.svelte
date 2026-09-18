@@ -63,7 +63,7 @@
 	<div class="mb-6 flex flex-col items-center">
 		<Logo size={80} showWordmark={true} class="flex-col gap-3" />
 		<p class="text-xs text-muted-light dark:text-muted-dark mt-2 font-medium tracking-wide text-center">
-			Neues Konto für 4labscloud erstellen
+			Neues Konto für 4LabCloud erstellen
 		</p>
 	</div>
 

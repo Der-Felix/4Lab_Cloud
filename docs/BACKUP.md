@@ -1,4 +1,4 @@
-# Backup- und Wiederherstellungs-Strategie: 4labscloud
+# Backup- und Wiederherstellungs-Strategie: 4LabCloud
 
 Dieses Dokument beschreibt die Datensicherungsarchitektur, die Einrichtung automatisierter Backups und das Vorgehen bei Notfall-Wiederherstellungen (Disaster Recovery).
 
@@ -6,7 +6,7 @@ Dieses Dokument beschreibt die Datensicherungsarchitektur, die Einrichtung autom
 
 ## 1. Die 3-2-1 Backup-Strategie
 
-Für den produktiven Betrieb von 4labscloud wird die Einhaltung der anerkannten 3-2-1-Regel empfohlen:
+Für den produktiven Betrieb von 4LabCloud wird die Einhaltung der anerkannten 3-2-1-Regel empfohlen:
 
 1. **3 Kopien der Daten**:
    - Originaldaten auf dem Produktivsystem (PostgreSQL + Storage-Volume).

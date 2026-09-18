@@ -15,11 +15,12 @@
 	--color-primary-light: #3BC1E8;
 	--color-accent: #2DD4BF;
 	--color-accent-light: #3BC1E8;
-	--color-bg-light: #FAFAFA;
+	--color-bg-light: #F4F4F5;
 	--color-bg-dark: #0A0A0B;
 	--color-surface-light: #FFFFFF;
 	--color-surface-dark: #141416;
-	--color-border-light: #E5E5E7;
+	--color-sidebar-light: #EFEFF1;
+	--color-border-light: #E4E4E7;
 	--color-border-dark: #26262A;
 	--color-text-light: #18181B;
 	--color-text-dark: #F5F5F7;
@@ -81,6 +82,14 @@ html:not(.dark) body {
 
 .card-depth {
 	background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+/* Light Mode Karten-Styling gemaess Design-Vorgaben */
+html:not(.dark) .card-depth,
+html:not(.dark) [class*="card-depth"],
+html:not(.dark) .card {
+	border: 1px solid var(--color-border-light);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 /* Skeleton-Pulsieren */

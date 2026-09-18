@@ -75,7 +75,7 @@
 </script>
 
 <svelte:head>
-	<title>{share ? `${share.filename} - Freigabe` : 'Datei-Freigabe'} - 4labscloud</title>
+	<title>{share ? `${share.filename} - Freigabe` : 'Datei-Freigabe'} - 4LabCloud</title>
 </svelte:head>
 
 <div class="w-full max-w-md rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-8 shadow-xl text-center">

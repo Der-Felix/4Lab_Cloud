@@ -77,7 +77,7 @@
 </script>
 
 <svelte:head>
-	<title>Alben - 4labscloud</title>
+	<title>Alben - 4LabCloud</title>
 </svelte:head>
 
 <div class="space-y-6">

@@ -251,7 +251,7 @@
 		<!-- Hintergrundfoto mit dunklem Overlay fuer Barrierefreiheit -->
 		<img
 			src="/assets/hero-default.jpg"
-			alt="4labscloud Bergpanorama"
+			alt="4LabCloud Bergpanorama"
 			class="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
 		/>
 		<div class="absolute inset-0 bg-black/40"></div>
@@ -295,10 +295,10 @@
 		</div>
 	</div>
 
-	<!-- 2. Hauptbereich: 2-Spalten-Grid (2/3 zu 1/3) -->
-	<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-		<!-- Linke Spalte (2/3): "Zuletzt verwendet" mit Tabs & 4er-Kachel-Grid -->
-		<div class="lg:col-span-2 space-y-4">
+	<!-- 2. Hauptbereich: Breiteres 2-Spalten-Layout (Flexibel + 320px Sidebar) -->
+	<div class="flex flex-col lg:flex-row gap-6 items-start">
+		<!-- Linke Spalte: "Zuletzt verwendet" mit Tabs & dynamischem Kachel-Grid -->
+		<div class="flex-1 min-w-0 space-y-4">
 			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-border-light dark:border-border-dark">
 				<!-- Section-Header mit 2x16px Akzentbalken (Primary) -->
 				<div class="flex items-center gap-2.5">
@@ -341,10 +341,10 @@
 				</div>
 			</div>
 
-			<!-- 4 Kacheln pro Reihe auf Desktop (1440px) -->
+			<!-- Dynamisches Kachel-Grid (4 Spalten, 5 bei xl) -->
 			{#if isLoading}
-				<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-					{#each Array(8) as _}
+				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+					{#each Array(10) as _}
 						<div class="aspect-4/5 rounded-xl bg-slate-200/70 dark:bg-slate-800/60 animate-skeleton"></div>
 					{/each}
 				</div>
@@ -364,8 +364,8 @@
 					</Button>
 				</div>
 			{:else}
-				<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-					{#each filteredFiles.slice(0, 8) as file (file.id)}
+				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+					{#each filteredFiles.slice(0, 10) as file (file.id)}
 						<FileCard
 							{file}
 							ondownload={handleDownload}
@@ -387,8 +387,8 @@
 			{/if}
 		</div>
 
-		<!-- Rechte Spalte (1/3): Sidebar-Karten mit Tiefe & Akzenten -->
-		<div class="space-y-6">
+		<!-- Rechte Spalte: Sidebar-Karten (w-80 / 320px) mit Tiefe & Akzenten -->
+		<div class="w-full lg:w-80 shrink-0 space-y-6">
 			<!-- Karte 1: Ihre Freigaben (mit Akzentbalken Amber & Kategorie-Icons) -->
 			<Card class="p-5">
 				<div class="flex items-center justify-between pb-3 border-b border-border-light dark:border-border-dark">

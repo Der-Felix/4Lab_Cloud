@@ -10,14 +10,14 @@
 
 <div class="flex items-center gap-2.5 select-none {customClass}">
 	<img
-		src="/assets/logo.png"
-		alt="4LabsCloud Logo"
+		src="/assets/logo-icon.svg"
+		alt="4LabCloud Logo"
 		style="width: {size}px; height: {size}px;"
-		class="object-contain shrink-0 rounded-md"
+		class="object-contain shrink-0"
 	/>
 	{#if showWordmark}
-		<span class="font-bold tracking-tight text-lg leading-none whitespace-nowrap">
-			<span class="text-[#0F3A6E] dark:text-[#3BC1E8]">4Labs</span><span class="text-[#1E6FD9] dark:text-[#F1F5F9]">Cloud</span>
+		<span class="font-bold tracking-tight text-lg leading-none whitespace-nowrap text-text-light dark:text-text-dark">
+			<span class="text-[#0F3A6E] dark:text-[#3BC1E8]">4Lab</span><span class="text-[#1E6FD9] dark:text-[#F1F5F9]">Cloud</span>
 		</span>
 	{/if}
 </div>

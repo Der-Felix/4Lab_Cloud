@@ -5,6 +5,14 @@ Alle nennenswerten Änderungen an diesem Projekt werden in dieser Datei dokument
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-09-18
+
+### Geändert
+- **Markenname**: Projektname im UI und der Dokumentation einheitlich auf **4LabCloud** korrigiert.
+- **Logo & Favicon**: Vektorisiertes Netzwerk-Cloud SVG-Icon (`logo.svg`, `logo-icon.svg`, `favicon.svg`) mit Farbverlauf (#1E6FD9 -> #2DD4BF) und gestochen scharfer HTML-Wortmarke integriert; veraltete PNG-Dateien bereinigt.
+- **Light Mode Kontrast**: Hintergrundfarbe auf `#F4F4F5` und Sidebar auf `#EFEFF1` geschärft; alle Karten mit 1px Rahmen und dezentem Schatten akzentuiert.
+- **Layout-Optimierung**: Dashboard-Breite auf bis zu 1600px erweitert, 5 Spalten bei `xl:` und vergrößerte rechte Seitenleiste (320px).
+
 ## [0.1.0] - 2026-09-18
 
 ### Hinzugefügt

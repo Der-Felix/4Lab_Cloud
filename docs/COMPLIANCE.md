@@ -1,12 +1,12 @@
 # Compliance-Dokumentation: DSGVO & BSI TR-02102-2
 
-4labscloud ist von Grund auf als datenschutzfreundliche („Privacy by Design“ & „Privacy by Default“) Plattform konzipiert. Dieses Dokument beschreibt die konkreten technischen und organisatorischen Maßnahmen (TOM) zur Einhaltung der Datenschutz-Grundverordnung (DSGVO) sowie der Vorgaben des Bundesamts für Sicherheit in der Informationstechnik (BSI).
+4LabCloud ist von Grund auf als datenschutzfreundliche („Privacy by Design“ & „Privacy by Default“) Plattform konzipiert. Dieses Dokument beschreibt die konkreten technischen und organisatorischen Maßnahmen (TOM) zur Einhaltung der Datenschutz-Grundverordnung (DSGVO) sowie der Vorgaben des Bundesamts für Sicherheit in der Informationstechnik (BSI).
 
 ---
 
 ## 1. DSGVO-Artikel-Mapping
 
-| DSGVO-Artikel | Gesetzliche Anforderung | Umsetzung in 4labscloud |
+| DSGVO-Artikel | Gesetzliche Anforderung | Umsetzung in 4LabCloud |
 |---|---|---|
 | **Art. 5 Abs. 1 lit. c**<br>*(Datenminimierung)* | Erhebung auf das notwendige Maß beschränken. | - Nginx loggt keine IP-Adressen (`log_format minimal '$request_method $request_uri $status'`).<br>- Keine externen Analytics, Cookies oder Tracking-Tools.<br>- Keine Inhaltsanalyse oder Metadaten-Scraping von Benutzerdateien. |
 | **Art. 5 Abs. 1 lit. e**<br>*(Speicherbegrenzung)* | Daten nur so lange speichern wie nötig. | - Automatische Bereinigung von Audit-Logs nach 90 Tagen (`AUDIT_RETENTION_DAYS`).<br>- Automatisches Verfallsdatum für öffentliche Freigaben (Share-Links).<br>- Temporäre Chunk-Dateien werden nach 24h unvollständigem Upload bereinigt. |
@@ -18,7 +18,7 @@
 
 ## 2. BSI TR-02102-2 Konformität (Kryptografische Verfahren)
 
-Die BSI Technische Richtlinie TR-02102-2 definiert Vorgaben für die Verwendung von Transport Layer Security (TLS). 4labscloud erfüllt diese Anforderungen vollständig:
+Die BSI Technische Richtlinie TR-02102-2 definiert Vorgaben für die Verwendung von Transport Layer Security (TLS). 4LabCloud erfüllt diese Anforderungen vollständig:
 
 1. **Ausschließliche Nutzung von TLS 1.3**: Ältere Protokolle (TLS 1.0, 1.1, 1.2) sind in Nginx deaktiviert.
 2. **Cipher Suites**: Verwendung von modernen AEAD-Ciphers (`TLS_AES_256_GCM_SHA384`, `TLS_CHACHA20_POLY1305_SHA256`).

@@ -196,7 +196,7 @@
 </script>
 
 <svelte:head>
-	<title>{currentTitle} - 4labscloud</title>
+	<title>{currentTitle} - 4LabCloud</title>
 </svelte:head>
 
 <!-- Globale Toasts -->
@@ -210,12 +210,12 @@
 	<div class="min-h-[100dvh] flex bg-bg-light dark:bg-bg-dark text-text-light dark:text-text-dark font-sans antialiased">
 		<!-- Sidebar (Seafile/Nextcloud-Struktur, 240px <-> 64px) -->
 		<aside
-			class="shrink-0 flex flex-col justify-between border-r border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark transition-[width] duration-200 ease-in-out z-40 sticky top-0 h-screen select-none {isCollapsed ? 'w-16' : 'w-60'}"
+			class="shrink-0 flex flex-col justify-between border-r border-border-light dark:border-border-dark bg-sidebar-light dark:bg-surface-dark transition-[width] duration-200 ease-in-out z-40 sticky top-0 h-screen select-none {isCollapsed ? 'w-16' : 'w-60'}"
 		>
 			<!-- Oberer Bereich: Logo (64px) & Collapse-Toggle oben rechts immer sichtbar -->
 			<div>
 				<div class="h-16 flex items-center border-b border-border-light dark:border-border-dark {isCollapsed ? 'justify-between px-2.5' : 'justify-between px-3.5'}">
-					<a href="/" class="flex items-center overflow-hidden focus:outline-hidden" title="4labscloud">
+					<a href="/" class="flex items-center overflow-hidden focus:outline-hidden" title="4LabCloud">
 						{#if isCollapsed}
 							<Logo size={24} showWordmark={false} />
 						{:else}
@@ -469,9 +469,9 @@
 			</header>
 
 
-			<!-- Seiteninhalt (max 1200px zentriert) -->
+			<!-- Seiteninhalt (max 1600px mit Padding statt Zentrierung bei breiten Screens) -->
 			<main class="flex-1 overflow-y-auto">
-				<div class="max-w-[1200px] mx-auto p-4 sm:p-6 lg:p-8 w-full">
+				<div class="max-w-[1600px] p-4 sm:p-6 lg:p-8 xl:p-10 w-full">
 					{@render children()}
 				</div>
 			</main>

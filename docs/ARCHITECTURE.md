@@ -1,6 +1,6 @@
-# Architektur-Dokumentation: 4labscloud
+# Architektur-Dokumentation: 4LabCloud
 
-4labscloud ist als moderne, micro-service-orientierte On-Premises-Cloud-Plattform konzipiert. Ziel ist es, höchste Datensicherheit, vollständige Souveränität und maximale Upload-Geschwindigkeit zu vereinen.
+4LabCloud ist als moderne, micro-service-orientierte On-Premises-Cloud-Plattform konzipiert. Ziel ist es, höchste Datensicherheit, vollständige Souveränität und maximale Upload-Geschwindigkeit zu vereinen.
 
 ---
 

@@ -1,6 +1,6 @@
-# 4labscloud
+# 4LabCloud
 
-4labscloud ist eine schlanke, souveräne Open-Source-Cloud-Plattform für verschlüsselten Dateiupload, Freigaben und Medienverwaltung. Die Plattform wurde ohne SaaS-Abhängigkeiten oder externe Tracking-Dienste speziell für maximale Performance, intuitive Bedienung und strikte europäische Datenschutzstandards konzipiert.
+4LabCloud ist eine schlanke, souveräne Open-Source-Cloud-Plattform für verschlüsselten Dateiupload, Freigaben und Medienverwaltung. Die Plattform wurde ohne SaaS-Abhängigkeiten oder externe Tracking-Dienste speziell für maximale Performance, intuitive Bedienung und strikte europäische Datenschutzstandards konzipiert.
 
 ---
 
@@ -78,7 +78,7 @@ podman logs -f 4labs-prod-nginx
 
 ## Backup & Restore Workflow
 
-4labscloud enthält vollautomatisierte Skripte zur Datensicherung und Wiederherstellung:
+4LabCloud enthält vollautomatisierte Skripte zur Datensicherung und Wiederherstellung:
 
 ### Automatisiertes Backup
 ```bash
@@ -155,4 +155,4 @@ podman logs -f 4labs-prod-nginx
 ## Lizenz
 
 Dieses Projekt ist lizenziert unter der [Apache-2.0-Lizenz](LICENSE).
-Copyright 2026 4LabsCloud Contributors.
+Copyright 2026 4LabCloud Contributors.

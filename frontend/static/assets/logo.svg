@@ -1,28 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
   <defs>
-    <linearGradient id="favGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#1E6FD9" />
       <stop offset="100%" stop-color="#2DD4BF" />
     </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3BC1E8" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#2DD4BF" stop-opacity="0.1" />
+    </linearGradient>
   </defs>
 
+  <!-- Cloud Outline Background & Shape -->
   <path
     d="M9 24h14a6 6 0 0 0 1.8-11.73 8.5 8.5 0 0 0-16.14-1.92A6.5 6.5 0 0 0 9 24z"
-    fill="#0F172A"
-    stroke="url(#favGrad)"
-    stroke-width="2.2"
+    fill="url(#glowGrad)"
+    stroke="url(#logoGrad)"
+    stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
 
+  <!-- Internal Network Connections (3 Nodes) -->
   <path
     d="M10.5 19.5l5.5-4.5 5.5 3.5"
-    stroke="url(#favGrad)"
-    stroke-width="1.75"
+    stroke="url(#logoGrad)"
+    stroke-width="1.5"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
 
+  <!-- Network Nodes (3 Punkte) -->
   <circle cx="10.5" cy="19.5" r="1.75" fill="#1E6FD9" />
   <circle cx="16" cy="15" r="2.2" fill="#2590E8" />
   <circle cx="21.5" cy="18.5" r="1.75" fill="#2DD4BF" />
