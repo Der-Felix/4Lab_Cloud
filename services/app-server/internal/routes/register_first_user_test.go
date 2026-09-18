@@ -28,12 +28,20 @@ func TestRegister_FirstUser(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Bereinige bestehende Test-Benutzer fuer saubere Ausgangslage
+	// Sicherheitspruefung: felix@4labs.local darf NIEMALS geloescht werden
+	var felixExists bool
+	_ = pool.QueryRow(ctx, "SELECT true FROM users WHERE email = 'felix@4labs.local'").Scan(&felixExists)
+	if felixExists {
+		t.Skip("Skipping FirstUser test on DB with existing felix@4labs.local admin account")
+		return
+	}
+
+	// Bereinige bestehende Test-Benutzer fuer saubere Ausgangslage (ohne felix@4labs.local zu gefaehrden)
 	_, err := pool.Exec(ctx, "DELETE FROM invitations")
 	if err != nil {
 		t.Fatalf("fehler beim bereinigen der einladungen: %v", err)
 	}
-	_, err = pool.Exec(ctx, "DELETE FROM users")
+	_, err = pool.Exec(ctx, "DELETE FROM users WHERE email != 'felix@4labs.local'")
 	if err != nil {
 		t.Fatalf("fehler beim bereinigen der benutzer: %v", err)
 	}
@@ -112,11 +120,18 @@ func TestRegister_FirstUser_RaceCondition(t *testing.T) {
 	}
 	defer pool.Close()
 
+	// Sicherheitspruefung: felix@4labs.local darf NIEMALS geloescht werden
 	ctx := context.Background()
+	var felixExists bool
+	_ = pool.QueryRow(ctx, "SELECT true FROM users WHERE email = 'felix@4labs.local'").Scan(&felixExists)
+	if felixExists {
+		t.Skip("Skipping FirstUser race test on DB with existing felix@4labs.local admin account")
+		return
+	}
 
 	// Bereinige Tabellen
 	_, _ = pool.Exec(ctx, "DELETE FROM invitations")
-	_, _ = pool.Exec(ctx, "DELETE FROM users")
+	_, _ = pool.Exec(ctx, "DELETE FROM users WHERE email != 'felix@4labs.local'")
 
 	limiter := auth.NewInMemoryRateLimiter()
 	testMFAKey := []byte("01234567890123456789012345678901")

@@ -105,6 +105,7 @@ IMMER: Dateien direkt schreiben.
 
 - Test-User: felix@4labs.local
 - Passwort: (siehe lokale .env oder vom Betreiber)
+- Tests laufen NIEMALS gegen die Live-Dev-DB. Bei Bedarf separate Test-DB 4labscloud_test oder In-Memory-Fixtures nutzen. Der Admin-Account felix@4labs.local ist unantastbar.
 - Nach jedem Test-Run: DB NICHT truncaten, User bleibt bestehen
 - E2E-Tests MUESSEN ihre Test-User selbst aufraeumen (defer DELETE)
 - felix@4labs.local ist der Admin-Account, NIEMALS loeschen

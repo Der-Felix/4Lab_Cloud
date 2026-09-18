@@ -6,7 +6,6 @@
 	import { IconMapPin, IconArrowRight, IconMap } from '@tabler/icons-svelte';
 	import type * as LeafletType from 'leaflet';
 
-	let mapEl = $state<HTMLDivElement>();
 	let leafletMap: LeafletType.Map | null = null;
 	let photosWithGps = $state<PhotoMapItem[]>([]);
 	let isLoading = $state(true);
@@ -14,43 +13,6 @@
 	onMount(async () => {
 		try {
 			photosWithGps = await getPhotosMap();
-
-			if (photosWithGps.length === 0) {
-				isLoading = false;
-				return;
-			}
-
-			const L = await loadLeaflet();
-			if (!mapEl) return;
-
-			leafletMap = L.map(mapEl, {
-				zoomControl: false,
-				attributionControl: false,
-				dragging: false,
-				touchZoom: false,
-				scrollWheelZoom: false,
-				doubleClickZoom: false,
-				boxZoom: false,
-				keyboard: false
-			});
-
-			createOsmTileLayer(L).addTo(leafletMap);
-
-			const tealIcon = createTealMarkerIcon(L);
-			const group = L.featureGroup();
-
-			for (const p of photosWithGps) {
-				const m = L.marker([p.gps_lat, p.gps_lon], { icon: tealIcon });
-				group.addLayer(m);
-			}
-
-			leafletMap.addLayer(group);
-
-			if (photosWithGps.length > 0) {
-				leafletMap.fitBounds(group.getBounds().pad(0.2));
-			} else {
-				leafletMap.setView([50, 10], 4);
-			}
 		} catch {
 			// Bei Fehlern Widget still verbergen
 			photosWithGps = [];
@@ -65,6 +27,66 @@
 			leafletMap = null;
 		}
 	});
+
+	// Svelte-Aktion: Wird garantiert ausgefuehrt, sobald der Knoten im DOM montiert ist
+	function initMiniMap(node: HTMLElement) {
+		let destroyed = false;
+
+		(async () => {
+			try {
+				const L = await loadLeaflet();
+				if (destroyed) return;
+
+				leafletMap = L.map(node, {
+					zoomControl: false,
+					attributionControl: false,
+					dragging: false,
+					touchZoom: false,
+					scrollWheelZoom: false,
+					doubleClickZoom: false,
+					boxZoom: false,
+					keyboard: false
+				});
+
+				createOsmTileLayer(L).addTo(leafletMap);
+
+				const tealIcon = createTealMarkerIcon(L);
+				const group = L.featureGroup();
+
+				for (const p of photosWithGps) {
+					const m = L.marker([p.gps_lat, p.gps_lon], { icon: tealIcon });
+					group.addLayer(m);
+				}
+
+				leafletMap.addLayer(group);
+
+				if (photosWithGps.length > 0) {
+					leafletMap.fitBounds(group.getBounds().pad(0.2));
+				} else {
+					leafletMap.setView([50, 10], 4);
+				}
+
+				// Verhindert graue Kacheln durch verzoegerte Groessenberechnung
+				setTimeout(() => {
+					if (!destroyed && leafletMap) {
+						leafletMap.invalidateSize();
+					}
+				}, 150);
+			} catch (err) {
+				console.error('Fehler beim Initialisieren der Mini-Karte:', err);
+			}
+		})();
+
+		return {
+			destroy() {
+				destroyed = true;
+				if (leafletMap) {
+					leafletMap.remove();
+					leafletMap = null;
+				}
+			}
+		};
+	}
 </script>
 
 {#if !isLoading && photosWithGps.length > 0}
@@ -92,7 +114,7 @@
 				class="block h-[180px] w-full rounded-xl overflow-hidden border border-border-light dark:border-border-dark relative shadow-xs"
 				title="Große Fotokarte öffnen"
 			>
-				<div bind:this={mapEl} class="w-full h-full pointer-events-none"></div>
+				<div use:initMiniMap class="w-full h-full pointer-events-none"></div>
 				<div class="absolute inset-0 bg-transparent group-hover:bg-black/10 transition-colors"></div>
 			</a>
 			<span class="block text-[10px] text-muted-light dark:text-muted-dark mt-1 text-right">

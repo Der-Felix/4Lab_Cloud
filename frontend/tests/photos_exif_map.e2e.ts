@@ -1,4 +1,13 @@
 import { test, expect } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const thumbBuffer = fs.readFileSync(path.join(__dirname, 'fixtures/thumb.jpg'));
+const osmTileBuffer = fs.readFileSync(path.join(__dirname, 'fixtures/osm_tile.png'));
 
 test.describe('Timeline, EXIF-Sidebar & Map Integration (v0.2.2)', () => {
 	test.beforeEach(async ({ page }) => {
@@ -17,6 +26,24 @@ test.describe('Timeline, EXIF-Sidebar & Map Integration (v0.2.2)', () => {
 					is_admin: true,
 					expires_in: 900
 				})
+			});
+		});
+
+		// OSM Map Tiles Mock (verhindert Access Denied in Headless/Offline)
+		await page.route(/.*tile\.openstreetmap\.org.*/, async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: 'image/png',
+				body: osmTileBuffer
+			});
+		});
+
+		// Valider Thumbnail Mock (echter JPEG-Header + Daten)
+		await page.route('**/api/v1/files/*/thumbnail', async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: 'image/jpeg',
+				body: thumbBuffer
 			});
 		});
 	});
@@ -90,14 +117,6 @@ test.describe('Timeline, EXIF-Sidebar & Map Integration (v0.2.2)', () => {
 			});
 		});
 
-		await page.route('**/api/v1/files/*/thumbnail', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'image/jpeg',
-				body: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46])
-			});
-		});
-
 		await page.goto('/photos');
 		await page.waitForLoadState('networkidle');
 
@@ -146,14 +165,6 @@ test.describe('Timeline, EXIF-Sidebar & Map Integration (v0.2.2)', () => {
 					page: 1,
 					limit: 100
 				})
-			});
-		});
-
-		await page.route('**/api/v1/files/photo-exif-1/thumbnail', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'image/jpeg',
-				body: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46])
 			});
 		});
 
@@ -244,11 +255,36 @@ test.describe('Timeline, EXIF-Sidebar & Map Integration (v0.2.2)', () => {
 			});
 		});
 
+		const mockDashboardFiles = [
+			{
+				id: 'photo-map-1',
+				filename: 'alpen.jpg',
+				size_bytes: 3500000,
+				mime_type: 'image/jpeg',
+				created_at: '2026-09-18T14:30:00Z',
+				taken_at: '2026-09-18T14:30:00Z',
+				location_name: 'Zermatt, Schweiz',
+				gps_lat: 45.9765,
+				gps_lon: 7.7491
+			},
+			{
+				id: 'photo-map-2',
+				filename: 'zuerich.jpg',
+				size_bytes: 2800000,
+				mime_type: 'image/jpeg',
+				created_at: '2026-09-17T10:00:00Z',
+				taken_at: '2026-09-17T10:00:00Z',
+				location_name: 'Zürich, Schweiz',
+				gps_lat: 47.3769,
+				gps_lon: 8.5417
+			}
+		];
+
 		await page.route('**/api/v1/files?*', async (route) => {
 			await route.fulfill({
 				status: 200,
 				contentType: 'application/json',
-				body: JSON.stringify({ files: [], total: 0, page: 1, limit: 16 })
+				body: JSON.stringify({ files: mockDashboardFiles, total: 2, page: 1, limit: 16 })
 			});
 		});
 
@@ -283,6 +319,10 @@ test.describe('Timeline, EXIF-Sidebar & Map Integration (v0.2.2)', () => {
 		const mapCard = page.locator('h3:has-text("Fotokarte")');
 		await expect(mapCard).toBeVisible();
 		await expect(page.locator('text=Auf Vollbildkarte anzeigen')).toBeVisible();
+
+		// Warte auf Leaflet Mini-Map Render
+		await page.waitForSelector('.leaflet-container', { state: 'visible', timeout: 5000 });
+		await page.waitForTimeout(1000);
 
 		// Screenshot fuer Dashboard mit Mini-Karte
 		await page.screenshot({ path: '../docs/screenshots/dashboard-map-preview.png', fullPage: true });
