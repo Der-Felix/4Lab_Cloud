@@ -211,7 +211,7 @@
 								>
 									{file.filename}
 								</button>
-								<p class="text-[11px] text-muted-light dark:text-muted-dark mt-0.5 tabular-nums">
+								<p class="text-2xs text-muted-light dark:text-muted-dark mt-0.5 tabular-nums">
 									{formatBytes(file.size_bytes)}
 								</p>
 							</div>
@@ -386,7 +386,7 @@
 		role="menu"
 		tabindex="-1"
 	>
-		<div class="px-3 py-1.5 border-b border-border-light dark:border-border-dark text-[11px] font-semibold text-muted-light dark:text-muted-dark truncate">
+		<div class="px-3 py-1.5 border-b border-border-light dark:border-border-dark text-2xs font-semibold text-muted-light dark:text-muted-dark truncate">
 			{contextMenu.file.filename}
 		</div>
 

@@ -113,7 +113,7 @@
 				>
 					{isRecoveryMode ? 'Authenticator-App (TOTP) verwenden' : 'Gerät verloren? Recovery-Code nutzen'}
 				</button>
-				<a href="/login" class="hover:underline text-[11px] text-muted-light dark:text-muted-dark">
+				<a href="/login" class="hover:underline text-2xs text-muted-light dark:text-muted-dark">
 					Abbrechen und zurück zur Anmeldung
 				</a>
 			</div>

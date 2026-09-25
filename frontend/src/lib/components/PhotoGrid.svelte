@@ -41,7 +41,7 @@
 								<h3 class="text-xs font-semibold uppercase tracking-wider text-muted-light dark:text-muted-dark">
 									{dayGroup.date}
 								</h3>
-								<span class="text-[11px] text-muted-light dark:text-muted-dark font-medium tabular-nums">
+								<span class="text-2xs text-muted-light dark:text-muted-dark font-medium tabular-nums">
 									({dayGroup.photos.length})
 								</span>
 							</div>

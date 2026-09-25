@@ -161,7 +161,7 @@
 										<p class="font-medium text-text-light dark:text-text-dark truncate">
 											{dev.label}
 										</p>
-										<p class="text-[11px] text-muted-light dark:text-muted-dark font-mono truncate max-w-xs" title={session.user_agent}>
+										<p class="text-2xs text-muted-light dark:text-muted-dark font-mono truncate max-w-xs" title={session.user_agent}>
 											{session.user_agent || 'Standard-Client'}
 										</p>
 									</div>
@@ -182,7 +182,7 @@
 							</td>
 							<td class="py-3 px-4 sm:px-6 text-right">
 								{#if session.is_current}
-									<span class="text-[11px] text-muted-light dark:text-muted-dark italic">Dieses Gerät</span>
+									<span class="text-2xs text-muted-light dark:text-muted-dark italic">Dieses Gerät</span>
 								{:else}
 									<Button
 										variant="ghost"

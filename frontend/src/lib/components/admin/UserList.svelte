@@ -153,7 +153,7 @@
 											<Badge variant="primary" size="sm">Sie</Badge>
 										{/if}
 									</div>
-									<div class="font-mono text-[11px] text-muted-light dark:text-muted-dark tabular-nums">
+									<div class="font-mono text-2xs text-muted-light dark:text-muted-dark tabular-nums">
 										{user.id}
 									</div>
 								</td>

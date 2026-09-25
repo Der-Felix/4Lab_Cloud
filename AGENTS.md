@@ -16,6 +16,21 @@ Lade bei Bedarf die folgenden Skills (liegen in `.agents/skills/`):
 | `go-gin-conventions` | Bei jedem Go-Code |
 | `sveltekit-uppy` | Bei jedem Frontend-Code |
 
+## Design-Regeln (verbindlich bei Frontend-Aenderungen)
+
+Bei **jeder** Aenderung an `frontend/` gilt **[docs/DESIGN.md](docs/DESIGN.md)** verbindlich.
+Das Dokument ist versioniert und damit die gemeinsame Quelle fuer Menschen und Agenten.
+Es regelt Farbtoken samt Kontrastnachweis, die Typo-Skala, Dichte- und Layoutvorgaben,
+Sidebar-Verhalten und Anti-Patterns.
+
+Kurzfassung der haertesten Regeln:
+- Keine Hex-Werte im Svelte-Code (Ausnahme `layout.css` und `Logo.svelte`), ausschliesslich Token-Klassen.
+- Keine handgesetzten Schriftgroessen. Nur die Stufen `text-3xs` bis `text-3xl`.
+- Kontraste vor einer Farbaenderung ausrechnen, nicht schaetzen - und gegen **beide**
+  Hintergruende pruefen (Karte `surface` und Seite `bg`), in Hell **und** Dunkel.
+- Keine festen Hoehen fuer bildschirmfuellende Elemente; Viewport-Bezug (`clamp`, `vh`) verwenden.
+- Aendert sich ein Token in `layout.css`, wird `docs/DESIGN.md` im selben Commit nachgezogen.
+
 ## Tech-Stack (verbindlich)
 
 - **Nginx** - einziger oeffentlicher Endpunkt (TLS 1.3)

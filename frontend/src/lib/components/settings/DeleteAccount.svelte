@@ -49,7 +49,7 @@
 				</div>
 				<div class="space-y-1">
 					<h4 class="font-semibold text-danger">Unwiderrufliche physische Vernichtung</h4>
-					<p class="text-muted-light dark:text-muted-dark text-[11px] leading-relaxed">
+					<p class="text-muted-light dark:text-muted-dark text-2xs leading-relaxed">
 						Gemäß Art. 17 DSGVO werden beim Löschen des Kontos alle Ihre verschlüsselten Dateien, Chunks,
 						Metadaten, Freigabelinks und Vorschaubilder unwiederbringlich gelöscht.
 					</p>

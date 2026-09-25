@@ -98,13 +98,13 @@
 	{#if hasError}
 		<div class="flex h-full w-full flex-col items-center justify-center p-3 text-center text-muted-light dark:text-muted-dark">
 			<AlertCircle class="w-6 h-6 mb-1 opacity-60 text-warning" />
-			<span class="text-[11px] truncate max-w-full">{photo.filename}</span>
+			<span class="text-2xs truncate max-w-full">{photo.filename}</span>
 		</div>
 	{/if}
 
 	<!-- Video-Indikator -->
 	{#if isVideo}
-		<div class="absolute top-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-xs flex items-center gap-1">
+		<div class="absolute top-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 text-3xs font-medium text-white backdrop-blur-xs flex items-center gap-1">
 			<Play class="w-3 h-3 fill-current" />
 			<span>Video</span>
 		</div>
@@ -113,6 +113,6 @@
 	<!-- Hover-Overlay: Filename + Datum -->
 	<div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent opacity-0 transition-opacity duration-150 group-hover:opacity-100 flex flex-col justify-end p-3 text-left">
 		<span class="truncate text-xs font-semibold text-white leading-tight">{photo.filename}</span>
-		<span class="text-[11px] text-slate-300 tabular-nums mt-0.5">{formatDate(photo.created_at)}</span>
+		<span class="text-2xs text-slate-300 tabular-nums mt-0.5">{formatDate(photo.created_at)}</span>
 	</div>
 </button>

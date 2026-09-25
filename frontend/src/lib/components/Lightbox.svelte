@@ -333,7 +333,7 @@
 			<div class="p-4 space-y-5 text-xs overflow-y-auto flex-1">
 				<!-- EXIF & Aufnahme-Bereich -->
 				<div class="space-y-3">
-					<h4 class="text-[11px] font-semibold uppercase tracking-wider text-muted-dark">Aufnahme & Gerät</h4>
+					<h4 class="text-2xs font-semibold uppercase tracking-wider text-muted-dark">Aufnahme & Gerät</h4>
 
 					{#if isLoadingExif}
 						<div class="space-y-2">
@@ -348,7 +348,7 @@
 							<div class="flex items-start gap-2.5 p-2 rounded-lg bg-bg-dark/50 border border-border-dark">
 								<IconMapPin size={16} class="text-accent shrink-0 mt-0.5" />
 								<div class="min-w-0 flex-1">
-									<span class="block text-[10px] text-muted-dark">Ort</span>
+									<span class="block text-3xs text-muted-dark">Ort</span>
 									<span class="font-medium text-text-dark break-words">{locationName}</span>
 								</div>
 							</div>
@@ -356,7 +356,7 @@
 							<div class="flex items-start gap-2.5 p-2 rounded-lg bg-bg-dark/50 border border-border-dark">
 								<IconMapPin size={16} class="text-amber shrink-0 mt-0.5" />
 								<div class="min-w-0 flex-1">
-									<span class="block text-[10px] text-muted-dark">Ort</span>
+									<span class="block text-3xs text-muted-dark">Ort</span>
 									<span class="font-medium text-amber">Ort nicht ermittelt (Geocoding inaktiv)</span>
 								</div>
 							</div>
@@ -367,7 +367,7 @@
 							<div class="flex items-start gap-2.5">
 								<IconCamera size={16} class="text-primary-light shrink-0 mt-0.5" />
 								<div class="min-w-0 flex-1">
-									<span class="block text-[10px] text-muted-dark">Kamera</span>
+									<span class="block text-3xs text-muted-dark">Kamera</span>
 									<span class="font-medium text-text-dark">{cameraName}</span>
 								</div>
 							</div>
@@ -378,7 +378,7 @@
 							<div class="flex items-start gap-2.5">
 								<IconFocus2 size={16} class="text-primary-light shrink-0 mt-0.5" />
 								<div class="min-w-0 flex-1">
-									<span class="block text-[10px] text-muted-dark">Objektiv</span>
+									<span class="block text-3xs text-muted-dark">Objektiv</span>
 									<span class="font-medium text-text-dark">{lensModel}</span>
 								</div>
 							</div>
@@ -401,13 +401,13 @@
 								{/if}
 								{#if isoFormatted}
 									<div class="flex items-center gap-1.5 text-text-dark">
-										<span class="text-[9px] font-bold text-muted-dark px-1 bg-border-dark rounded">ISO</span>
+										<span class="text-3xs font-bold text-muted-dark px-1 bg-border-dark rounded">ISO</span>
 										<span class="tabular-nums">{isoFormatted.replace('ISO ', '')}</span>
 									</div>
 								{/if}
 								{#if focalFormatted}
 									<div class="flex items-center gap-1.5 text-text-dark">
-										<span class="text-[9px] font-bold text-muted-dark px-1 bg-border-dark rounded">FL</span>
+										<span class="text-3xs font-bold text-muted-dark px-1 bg-border-dark rounded">FL</span>
 										<span class="tabular-nums">{focalFormatted}</span>
 									</div>
 								{/if}
@@ -419,7 +419,7 @@
 							<div class="pt-2 border-t border-border-dark space-y-2">
 								<div class="flex items-start gap-2 text-text-dark">
 									<IconCurrentLocation size={15} class="text-accent shrink-0 mt-0.5" />
-									<span class="tabular-nums text-[11px] text-muted-dark">
+									<span class="tabular-nums text-2xs text-muted-dark">
 										{formatCoordinates(gpsLat, gpsLon)}
 									</span>
 								</div>
@@ -438,27 +438,27 @@
 
 				<!-- Datei-Details -->
 				<div class="space-y-2.5 border-t border-border-dark pt-4">
-					<h4 class="text-[11px] font-semibold uppercase tracking-wider text-muted-dark">Datei</h4>
+					<h4 class="text-2xs font-semibold uppercase tracking-wider text-muted-dark">Datei</h4>
 
 					<div>
-						<span class="block text-[10px] text-muted-dark">Dateiname</span>
+						<span class="block text-3xs text-muted-dark">Dateiname</span>
 						<span class="font-medium text-text-dark break-all">{currentPhoto.filename}</span>
 					</div>
 
 					{#if currentPhoto.width && currentPhoto.height}
 						<div>
-							<span class="block text-[10px] text-muted-dark">Auflösung</span>
+							<span class="block text-3xs text-muted-dark">Auflösung</span>
 							<span class="text-text-dark tabular-nums">{currentPhoto.width} × {currentPhoto.height} px</span>
 						</div>
 					{/if}
 
 					<div>
-						<span class="block text-[10px] text-muted-dark">Dateigröße</span>
+						<span class="block text-3xs text-muted-dark">Dateigröße</span>
 						<span class="text-text-dark tabular-nums">{formatBytes(currentPhoto.size_bytes)}</span>
 					</div>
 
 					<div>
-						<span class="block text-[10px] text-muted-dark">Aufnahme- / Erstelldatum</span>
+						<span class="block text-3xs text-muted-dark">Aufnahme- / Erstelldatum</span>
 						<span class="text-text-dark tabular-nums">
 							{formatDate(currentPhoto.taken_at || currentPhoto.created_at)}
 						</span>
@@ -467,12 +467,12 @@
 
 				<!-- Alben & Tags -->
 				<div class="space-y-2.5 border-t border-border-dark pt-4">
-					<h4 class="text-[11px] font-semibold uppercase tracking-wider text-muted-dark">Alben & Tags</h4>
+					<h4 class="text-2xs font-semibold uppercase tracking-wider text-muted-dark">Alben & Tags</h4>
 
 					<div class="flex flex-wrap gap-1.5">
 						{#each allTags as tag}
 							<span
-								class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-bg-dark text-neutral-300 border border-border-dark"
+								class="inline-flex items-center px-2 py-0.5 rounded-md text-2xs font-medium bg-bg-dark text-neutral-300 border border-border-dark"
 								style={tag.color ? `border-left-color: ${tag.color}; border-left-width: 3px;` : ''}
 							>
 								{tag.name}
@@ -533,7 +533,7 @@
 						<div class="flex items-start gap-2.5 p-2 rounded-lg bg-bg-dark/50 border border-border-dark">
 							<IconMapPin size={16} class="text-accent shrink-0 mt-0.5" />
 							<div class="min-w-0 flex-1">
-								<span class="block text-[10px] text-muted-dark">Ort</span>
+								<span class="block text-3xs text-muted-dark">Ort</span>
 								<span class="font-medium text-text-dark">{locationName}</span>
 							</div>
 						</div>
@@ -541,7 +541,7 @@
 						<div class="flex items-start gap-2.5 p-2 rounded-lg bg-bg-dark/50 border border-border-dark">
 							<IconMapPin size={16} class="text-amber shrink-0 mt-0.5" />
 							<div class="min-w-0 flex-1">
-								<span class="block text-[10px] text-muted-dark">Ort</span>
+								<span class="block text-3xs text-muted-dark">Ort</span>
 								<span class="font-medium text-amber">Ort nicht ermittelt (Geocoding inaktiv)</span>
 							</div>
 						</div>
@@ -582,13 +582,13 @@
 							{/if}
 							{#if isoFormatted}
 								<div class="flex items-center gap-1.5 text-text-dark">
-									<span class="text-[9px] font-bold text-muted-dark px-1 bg-border-dark rounded">ISO</span>
+									<span class="text-3xs font-bold text-muted-dark px-1 bg-border-dark rounded">ISO</span>
 									<span>{isoFormatted.replace('ISO ', '')}</span>
 								</div>
 							{/if}
 							{#if focalFormatted}
 								<div class="flex items-center gap-1.5 text-text-dark">
-									<span class="text-[9px] font-bold text-muted-dark px-1 bg-border-dark rounded">FL</span>
+									<span class="text-3xs font-bold text-muted-dark px-1 bg-border-dark rounded">FL</span>
 									<span>{focalFormatted}</span>
 								</div>
 							{/if}
@@ -598,7 +598,7 @@
 					<!-- GPS & Button "Auf Karte zeigen" -->
 					{#if hasGps}
 						<div class="pt-2 border-t border-border-dark space-y-2">
-							<div class="flex items-center gap-2 text-muted-dark text-[11px]">
+							<div class="flex items-center gap-2 text-muted-dark text-2xs">
 								<IconCurrentLocation size={14} class="text-accent" />
 								<span>{formatCoordinates(gpsLat, gpsLon)}</span>
 							</div>

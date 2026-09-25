@@ -182,7 +182,7 @@
 					{/if}
 
 					<div class="space-y-3 min-w-0 flex-1 text-center sm:text-left">
-						<div class="text-[11px] font-semibold uppercase tracking-wider text-muted-light dark:text-muted-dark">
+						<div class="text-2xs font-semibold uppercase tracking-wider text-muted-light dark:text-muted-dark">
 							Manueller Schlüssel
 						</div>
 						<div class="font-mono text-xs font-bold p-2.5 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark break-all select-all">

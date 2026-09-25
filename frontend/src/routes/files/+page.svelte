@@ -256,7 +256,7 @@
 	<div class="flex flex-col md:flex-row items-start gap-6">
 		<!-- Linke Spalte (200px): Ordnerbaum / Kategorien -->
 		<div class="w-full md:w-[200px] shrink-0 space-y-1">
-			<div class="text-[11px] font-semibold uppercase tracking-wider text-muted-light dark:text-muted-dark px-2.5 mb-2">
+			<div class="text-2xs font-semibold uppercase tracking-wider text-muted-light dark:text-muted-dark px-2.5 mb-2">
 				Ordner & Filter
 			</div>
 			<nav class="space-y-0.5">
