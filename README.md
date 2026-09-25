@@ -150,7 +150,7 @@ podman logs -f 4labs-prod-nginx
 | `UPLOAD_PORT` | `8081` | Interner Port des Rust-Storage-Services |
 | `GEOCODING_ENABLED` | `false` | Reverse-Geocoding via Nominatim aktivieren. Standardmäßig aus – ohne laufenden Nominatim-Dienst bleibt `location_name` leer. |
 | `NOMINATIM_URL` | `http://nominatim:8080` | Adresse der self-hosted Nominatim-Instanz (nur bei aktiviertem Geocoding) |
-| `NOMINATIM_PBF_URL` | *(Monaco)* | OSM-Datenauszug, den der Nominatim-Container importiert. Nur in `.env.prod.example`. **Achtung:** Der Import läuft je nach Region Stunden bis Tage. |
+| `NOMINATIM_PBF_URL` | *(Deutschland)* | OSM-Datenauszug, den der Nominatim-Container importiert. **Achtung:** Der voreingestellte Deutschland-Auszug importiert mehrere Stunden und belegt zweistellige Gigabyte. Zum Ausprobieren einen kleineren Auszug setzen, z. B. `…/europe/monaco-latest.osm.pbf`. |
 
 ---
 

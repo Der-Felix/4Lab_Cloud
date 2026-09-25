@@ -324,9 +324,18 @@
 			</div>
 			<div class="py-1">
 				{#each SECTION_LABELS as item}
+					<!-- aria-pressed macht den Zustand fuer Screenreader lesbar. Ohne das
+					     waere die Markierung rein visuell und der Schalter nicht bedienbar. -->
 					<button
 						type="button"
-						onclick={() => toggleSection(item.key)}
+						onclick={(e) => {
+							// Dropdown.svelte schliesst bei jedem Klick im Inhalt. Fuer ein Panel
+							// mit sechs Schaltern ist das falsch - sonst muesste es je Umschaltung
+							// neu geoeffnet werden.
+							e.stopPropagation();
+							toggleSection(item.key);
+						}}
+						aria-pressed={sections[item.key]}
 						class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
 					>
 						<span>{item.label}</span>
@@ -345,7 +354,10 @@
 			<div class="px-3 py-2 border-t border-border-light dark:border-border-dark">
 				<button
 					type="button"
-					onclick={resetSections}
+					onclick={(e) => {
+						e.stopPropagation();
+						resetSections();
+					}}
 					class="text-xs text-primary dark:text-primary-light hover:underline cursor-pointer"
 				>
 					Alle anzeigen

@@ -431,4 +431,19 @@ test.describe('Dashboard Layout & Farboptimierung V2 E2E', () => {
 			`Element ragt aus dem Viewport: ${overflow.worst} (rechte Kante ${overflow.maxRight} > ${overflow.vw})`
 		).toBeLessThanOrEqual(overflow.vw);
 	});
+
+	test('Anpassen-Schalter melden ihren Zustand an Screenreader', async ({ page }) => {
+		setupAuthenticatedRoutes(page);
+		await page.setViewportSize({ width: 1440, height: 900 });
+		await page.goto('/');
+		await page.getByRole('button', { name: 'Dashboard anpassen' }).click();
+
+		// Der Zustand darf nicht nur gezeichnet sein: ohne aria-pressed ist fuer
+		// Screenreader nicht erkennbar, welche Bereiche sichtbar sind.
+		const kennzahlen = page.getByRole('button', { name: 'Kennzahlen' });
+		await expect(kennzahlen).toHaveAttribute('aria-pressed', 'true');
+
+		await kennzahlen.click();
+		await expect(kennzahlen).toHaveAttribute('aria-pressed', 'false');
+	});
 });

@@ -115,20 +115,42 @@ Empfohlene erste Schritte:
 
 ---
 
-## 7. Optional: Reverse-Geocoding
+## 7. Reverse-Geocoding: aktivieren oder bewusst abschalten
 
-Ohne diesen Schritt funktioniert alles, Fotos erhalten lediglich keine Ortsnamen.
+> **Wichtig:** `.env.prod.example` setzt `GEOCODING_ENABLED=true`, der
+> Nominatim-Container startet aber **nur** mit dem Compose-Profil `geocoding`.
+> Wer die kopierte Vorlage unverändert übernimmt und ohne dieses Profil startet,
+> betreibt die Instanz mit aktiviertem Geocoding **ohne** den zugehörigen Dienst.
+> Uploads mit GPS-Koordinaten laufen dann in eine vergebliche Anfrage; der Upload
+> selbst gelingt, der Ortsname bleibt jedoch leer und wird **nicht automatisch
+> nachgeholt**.
 
-4LabCloud nutzt eine **selbst gehostete** Nominatim-Instanz – es werden keine
-Koordinaten an Dritte übertragen. Der Container liegt hinter dem Compose-Profil
-`geocoding`:
+Entscheiden Sie sich daher vor dem ersten Start für eine der beiden Varianten.
+
+**Variante A – ohne Ortsnamen (empfohlen für den Einstieg)**
+
+In der Konfiguration setzen:
 
 ```bash
+GEOCODING_ENABLED=false
+```
+
+Alles andere funktioniert unverändert, Fotos erhalten lediglich keine Ortsnamen.
+
+**Variante B – mit eigener Nominatim-Instanz**
+
+4LabCloud nutzt eine **selbst gehostete** Instanz; es werden keine Koordinaten an
+Dritte übertragen. `GEOCODING_ENABLED=true` belassen und den Stack **mit** dem
+Profil starten:
+
+```bash
+cd ~/4Lab_Cloud/deploy/podman/prod        # Pfad ggf. anpassen
 podman-compose --env-file ../../../.env -f docker-compose.prod.yml \
   --profile geocoding up -d
 ```
 
-In der Konfiguration `GEOCODING_ENABLED=true` setzen.
+Das Profil muss bei **jedem** Start und Update mit angegeben werden, sonst fehlt
+der Dienst erneut.
 
 > **Planen Sie Zeit und Platz ein.** Der Container importiert beim ersten Start einen
 > OSM-Datenauszug (`NOMINATIM_PBF_URL`). Der Standardwert in `.env.prod.example` ist
@@ -209,7 +231,7 @@ Der Änderungsverlauf steht im
 |---|---|
 | Browser warnt vor dem Zertifikat | Im Entwicklungsmodus normal (selbstsigniert). Produktiv: Certbot-Zertifikate und korrekte `DOMAIN` prüfen. |
 | Anmeldung antwortet `429` | Rate-Limiter: 5 Versuche pro Minute und IP, 10 pro Stunde und E-Mail. Kurz warten. |
-| Container startet nicht | Logs ansehen: `podman logs 4labs-app-server`. Häufigste Ursache sind fehlende oder unvollständige Werte in der Konfiguration. |
+| Container startet nicht | Logs ansehen: `podman logs 4labs-prod-app-server`. Häufigste Ursache sind fehlende oder unvollständige Werte in der Konfiguration. |
 | Fotos ohne Ortsnamen | Geocoding ist deaktiviert (Standard) oder Nominatim läuft nicht – siehe Abschnitt 7. |
 | Karte bleibt leer | Keine Fotos mit GPS-Koordinaten vorhanden, oder GPS-Speicherung ist deaktiviert. Bereits ohne Koordinaten gespeicherte Fotos lassen sich nicht nachträglich verorten. |
 | Spalten fehlen nach einem Update | Migration nicht eingespielt – siehe Abschnitt 9. |

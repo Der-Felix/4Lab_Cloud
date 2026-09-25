@@ -44,9 +44,12 @@ docs/                  Diese Dokumentation (zugleich Quelle für GitHub Pages)
 
 ## 3. Lokal starten
 
+Alle Befehle in diesem Handbuch starten im **Wurzelverzeichnis des Repositorys**,
+sofern nicht anders angegeben.
+
 ```bash
 cp .env.example .env
-cd deploy/podman && podman-compose --env-file ../../.env up -d
+podman-compose --env-file .env -f deploy/podman/podman-compose.yml up -d
 ```
 
 Erreichbar unter `https://localhost:8443`. Das Entwicklungszertifikat ist selbstsigniert –
@@ -67,9 +70,9 @@ Container nicht** – man testet dann weiter die alte Version.
 Verlässlicher Ablauf für einen einzelnen Dienst:
 
 ```bash
-cd deploy/podman
-podman-compose --env-file ../../.env build frontend
-podman-compose --env-file ../../.env up -d --force-recreate frontend
+# aus dem Wurzelverzeichnis
+podman-compose --env-file .env -f deploy/podman/podman-compose.yml build frontend
+podman-compose --env-file .env -f deploy/podman/podman-compose.yml up -d --force-recreate frontend
 ```
 
 Immer gegenprüfen, dass der Container auch wirklich das neue Image fährt:

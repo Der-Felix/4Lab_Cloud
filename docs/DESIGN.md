@@ -104,7 +104,9 @@ umdefiniert - niemals 70+ Fundstellen einzeln mit `dark:`-Varianten geflickt.
   (`matchMedia('(max-width: 767px)')`), unabhaengig von der Nutzerpraeferenz. Bei 240px auf
   einem 390px-Bildschirm bleiben sonst 150px fuer den gesamten Inhalt.
 - **Collapse-Persistenz**: Cookie `sidebar_collapsed=true|false; path=/; max-age=31536000; SameSite=Strict; Secure`, kein `httpOnly` (SSR-Sync ohne Flash).
-- **Aktiv-Zustand**: `bg-primary/15 text-primary dark:text-primary-light border-l-[3px] border-primary`.
+- **Aktiv-Zustand**: voller Primaerhintergrund mit weisser Schrift und linkem Akzentbalken:
+  `bg-primary text-white border-l-[3px] border-primary-light`. (Die Richtlinie nannte hier
+  frueher eine 15-Prozent-Tintung mit farbiger Schrift - das entsprach nie der Umsetzung.)
 - **Icons**: einheitlich 16px (`w-4 h-4`).
   **Offene Schuld:** Es sind zwei Icon-Bibliotheken im Einsatz - `@lucide/svelte` (18 Dateien)
   und `@tabler/icons-svelte` (13 Dateien). Das ist unbeabsichtigt gewachsen, vergroessert das
