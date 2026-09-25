@@ -45,6 +45,8 @@
 	let exifData: FileExifData | null = null;
 	let isLoadingExif = false;
 	let exifLoadedForId = '';
+	// Zaehler zur Erkennung veralteter EXIF-Antworten (Race Condition beim schnellen Wechseln der Fotos)
+	let exifRequestToken = 0;
 
 	$: currentPhoto = photos[currentIndex];
 	$: isVideo = currentPhoto?.mime_type?.startsWith('video/');
@@ -52,11 +54,15 @@
 	$: hasNext = currentIndex < photos.length - 1;
 
 	$: if (currentPhoto && !isVideo) {
-		getThumbnailBlob(currentPhoto.id)
+		// Foto-ID vor dem Fetch merken: veraltete Antworten (falls inzwischen weitergeblaettert wurde) werden verworfen
+		const requestedId = currentPhoto.id;
+		getThumbnailBlob(requestedId)
 			.then((url) => {
+				if (currentPhoto?.id !== requestedId) return;
 				imageBlobUrl = url;
 			})
 			.catch(() => {
+				if (currentPhoto?.id !== requestedId) return;
 				imageBlobUrl = '';
 			});
 	}
@@ -78,14 +84,22 @@
 	});
 
 	async function loadExif(fileId: string) {
+		// Token vor dem Await erhoehen und lokal merken, damit eine veraltet eintreffende Antwort
+		// (ueberholt durch einen neueren Foto-Wechsel) weder Daten noch den Ladezustand ueberschreibt
+		const requestToken = ++exifRequestToken;
 		isLoadingExif = true;
 		exifData = null;
 		try {
-			exifData = await getFileExif(fileId);
+			const data = await getFileExif(fileId);
+			if (requestToken !== exifRequestToken) return;
+			exifData = data;
 		} catch {
+			if (requestToken !== exifRequestToken) return;
 			exifData = null;
 		} finally {
-			isLoadingExif = false;
+			if (requestToken === exifRequestToken) {
+				isLoadingExif = false;
+			}
 		}
 	}
 

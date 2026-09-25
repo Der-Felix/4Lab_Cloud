@@ -18,12 +18,18 @@ ALTER TABLE users
 -- 3. Cache-Tabelle fuer Reverse-Geocoding-Ergebnisse (Nominatim)
 CREATE TABLE IF NOT EXISTS geocoding_cache (
     id SERIAL PRIMARY KEY,
-    lat_rounded NUMERIC(6,4) NOT NULL,
-    lon_rounded NUMERIC(6,4) NOT NULL,
+    lat_rounded NUMERIC(9,4) NOT NULL,
+    lon_rounded NUMERIC(9,4) NOT NULL,
     display_name TEXT NOT NULL,
     address_json JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (lat_rounded, lon_rounded)
 );
+
+-- Bestehende Tabelle nachtraeglich korrigieren: die alte Praezision reichte fuer
+-- Breitengrad (max. +-90), aber Laengengrad geht bis +-180 und braucht eine
+-- fuenfte Vorkommastelle, sonst schlaegt der Insert mit numeric-overflow fehl.
+ALTER TABLE geocoding_cache ALTER COLUMN lat_rounded TYPE NUMERIC(9,4);
+ALTER TABLE geocoding_cache ALTER COLUMN lon_rounded TYPE NUMERIC(9,4);
 
 CREATE INDEX IF NOT EXISTS idx_geocoding_cache_coords ON geocoding_cache(lat_rounded, lon_rounded);

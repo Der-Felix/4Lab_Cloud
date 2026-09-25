@@ -305,9 +305,16 @@ func (h *UploadsHandler) Complete(c *gin.Context) {
 	)
 
 	if strings.HasPrefix(mimeType, "image/") {
-		// Pruefen, ob Nutzer GPS-Speicherung erlaubt
-		var storeGPS bool = true
-		_ = h.dbPool.QueryRow(c.Request.Context(), "SELECT store_gps FROM users WHERE id = $1", userID).Scan(&storeGPS)
+		// Pruefen, ob Nutzer GPS-Speicherung erlaubt (fail closed: im Zweifel keine GPS-Speicherung)
+		var storeGPS bool = false
+		if gpsErr := h.dbPool.QueryRow(c.Request.Context(), "SELECT store_gps FROM users WHERE id = $1", userID).Scan(&storeGPS); gpsErr != nil {
+			storeGPS = false
+			if errors.Is(gpsErr, pgx.ErrNoRows) {
+				slog.ErrorContext(c.Request.Context(), "kein user-datensatz fuer gps-praeferenz gefunden, gps wird nicht gespeichert", "user_id", userID)
+			} else {
+				slog.ErrorContext(c.Request.Context(), "gps-praeferenz konnte nicht gelesen werden, gps wird nicht gespeichert", "user_id", userID, "error", gpsErr)
+			}
+		}
 
 		thumbURL := fmt.Sprintf("%s/internal/thumbs/%s", h.uploadServiceURL, req.UploadID.String())
 		thumbReqPayload := map[string]any{

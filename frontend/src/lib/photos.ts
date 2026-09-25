@@ -144,17 +144,21 @@ export async function getAlbumFiles(tagId: string): Promise<AlbumResponse> {
 export function groupPhotosByDate(photos: PhotoItem[]): PhotoGroup[] {
 	const groupsMap = new Map<string, PhotoItem[]>();
 
+	// Lokales Datum verwenden (nicht UTC), damit "Heute"/"Gestern" mit dem Kalendertag des Nutzers uebereinstimmt
+	const localDateKey = (d: Date) =>
+		`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 	const now = new Date();
-	const todayStr = now.toISOString().slice(0, 10);
+	const todayStr = localDateKey(now);
 
 	const yesterday = new Date(now);
 	yesterday.setDate(yesterday.getDate() - 1);
-	const yesterdayStr = yesterday.toISOString().slice(0, 10);
+	const yesterdayStr = localDateKey(yesterday);
 
 	for (const photo of photos) {
 		const rawDate = photo.taken_at || photo.created_at;
 		const dateObj = new Date(rawDate);
-		const key = rawDate ? rawDate.slice(0, 10) : 'Unbekannt';
+		const key = rawDate && !isNaN(dateObj.getTime()) ? localDateKey(dateObj) : 'Unbekannt';
 
 		let title = key;
 		if (key === todayStr) {
@@ -223,8 +227,9 @@ export function groupByTimeline(photos: PhotoItem[]): TimelineMonth[] {
 			? `${dateObj.toLocaleDateString('de-DE', { month: 'long' })} ${dateObj.getFullYear()}`
 			: 'Unbekannt';
 
+		// Lokales Datum verwenden (nicht UTC), damit der Tag-Key mit dayLabel und monthKey uebereinstimmt
 		const dayKey = isValid
-			? dateObj.toISOString().slice(0, 10)
+			? `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`
 			: 'unbekannt';
 
 		const dayLabel = isValid

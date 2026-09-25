@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
 	groupByTimeline,
 	formatAperture,
@@ -75,5 +75,78 @@ describe('photos timeline & formatters', () => {
 		expect(timeline[1].days.length).toBe(1);
 		expect(timeline[1].days[0].date).toBe('5. Aug');
 		expect(timeline[1].days[0].photos.length).toBe(1);
+	});
+
+	describe('Tag-Bucket ueber lokale Mitternacht hinweg (Regression)', () => {
+		// Die dayKey-Berechnung in groupByTimeline muss auf LOKALEN Datumsteilen basieren, nicht auf UTC
+		// (dayLabel und monthKey sind bereits lokal). Zwei Fotos, die in UTC am selben Tag liegen, aber
+		// in der lokalen Zeitzone auf unterschiedliche Kalendertage fallen, duerfen NICHT im selben
+		// Tag-Bucket landen.
+		//
+		// Zeitzonen-Sicherheit dieses Tests: wir pinnen process.env.TZ explizit auf 'Europe/Berlin', bevor
+		// irgendein Date-Objekt erzeugt wird. Node liest process.env.TZ bei jedem Date-Zugriff neu aus
+		// (siehe Verifikation), es gibt also kein Caching-Problem. Eine feste, von UTC verschiedene Zone
+		// ist hier notwendig: laeuft der Test in einer Umgebung mit TZ=UTC (z. B. viele CI-Runner), faellt
+		// der lokale Tag mit dem UTC-Tag zusammen und der Bug waere nicht reproduzierbar, egal wie die
+		// Eingabe-Zeitstempel konstruiert werden. Innerhalb der gepinnten Zone werden die Eingaben zudem
+		// bewusst so gewaehlt, dass sie lokale Mitternacht ueberschreiten (12:00 und 01:00 Uhr lokal an
+		// aufeinanderfolgenden Kalendertagen), exakt der in der Fehlermeldung beschriebene Reproduktionsfall.
+		let originalTz: string | undefined;
+
+		beforeAll(() => {
+			originalTz = process.env.TZ;
+			process.env.TZ = 'Europe/Berlin';
+		});
+
+		afterAll(() => {
+			process.env.TZ = originalTz;
+		});
+
+		it('ordnet Fotos anhand des LOKALEN Kalendertags ein, nicht des UTC-Tags', () => {
+			const photos: PhotoItem[] = [
+				{
+					id: 'berlin-day18',
+					filename: 'day18.jpg',
+					size_bytes: 100,
+					mime_type: 'image/jpeg',
+					// 2026-09-18T10:00:00Z => Europe/Berlin (Sommerzeit, UTC+2) = 18.09.2026, 12:00 lokal
+					created_at: '2026-09-18T10:00:00Z',
+					taken_at: '2026-09-18T10:00:00Z'
+				},
+				{
+					id: 'berlin-day19',
+					filename: 'day19.jpg',
+					size_bytes: 100,
+					mime_type: 'image/jpeg',
+					// 2026-09-18T23:00:00Z => Europe/Berlin (UTC+2) = 19.09.2026, 01:00 lokal
+					// Beide Fotos liegen also am selben UTC-Kalendertag (18.09.), aber an ZWEI
+					// verschiedenen lokalen Kalendertagen.
+					created_at: '2026-09-18T23:00:00Z',
+					taken_at: '2026-09-18T23:00:00Z'
+				}
+			];
+
+			const timeline = groupByTimeline(photos);
+
+			expect(timeline.length).toBe(1);
+			expect(timeline[0].month).toBe('September 2026');
+
+			// Der alte, UTC-basierte dayKey wuerde hier nur EINEN Tag-Bucket ("2026-09-18") erzeugen,
+			// gelabelt mit dem Datum des zuerst eingefuegten (weil absteigend sortierten) Fotos: "19. Sep".
+			// Korrekt sind ZWEI getrennte Tag-Buckets mit den jeweils lokal korrekten Labels.
+			expect(timeline[0].days.length).toBe(2);
+
+			const rawDates = timeline[0].days.map((d) => d.rawDate).sort();
+			expect(rawDates).toEqual(['2026-09-18', '2026-09-19']);
+
+			const day18 = timeline[0].days.find((d) => d.rawDate === '2026-09-18');
+			const day19 = timeline[0].days.find((d) => d.rawDate === '2026-09-19');
+
+			expect(day18?.date).toBe('18. Sep');
+			expect(day18?.photos.map((p) => p.id)).toEqual(['berlin-day18']);
+
+			expect(day19?.date).toBe('19. Sep');
+			expect(day19?.photos.map((p) => p.id)).toEqual(['berlin-day19']);
+		});
 	});
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { listPhotos, type PhotoItem } from '$lib/photos';
+	import type { FileListResponse } from '$lib/files';
 	import PhotoGrid from '$lib/components/PhotoGrid.svelte';
 	import Lightbox from '$lib/components/Lightbox.svelte';
 	import { Button } from '$lib/components/ui';
@@ -15,7 +16,15 @@
 
 	let photos = $state<PhotoItem[]>([]);
 	let isLoading = $state(true);
+	let isLoadingMore = $state(false);
 	let error = $state<string | null>(null);
+
+	// Generationszaehler: erkennt, ob eine laufende Hintergrund-Nachladung noch zur aktuellen Anfrage gehoert
+	let loadToken = 0;
+
+	// Sicherheitsgrenzen fuer die progressive Nachladung (verhindert Endlos-Nachladen bei riesigen Bibliotheken)
+	const MAX_BACKGROUND_PAGES = 50;
+	const MAX_BACKGROUND_PHOTOS = 5000;
 
 	// Filter-Zustände
 	let activeFilter = $state<'all' | 'images' | 'videos'>('all');
@@ -38,17 +47,77 @@
 		if (resetPage) {
 			page = 1;
 		}
+		// Neue Generation: laufende Hintergrund-Nachladungen einer vorherigen Anfrage erkennen dies
+		// anhand des veralteten Tokens und brechen ab, statt ihre Ergebnisse anzuhaengen.
+		const token = ++loadToken;
 		isLoading = true;
+		isLoadingMore = false;
 		error = null;
 
 		try {
 			const res = await listPhotos(activeFilter, page, limit, searchQuery);
+			if (token !== loadToken) return;
 			photos = res.files || [];
 			total = res.total;
 		} catch (err: unknown) {
+			if (token !== loadToken) return;
 			error = err instanceof Error ? err.message : 'Fehler beim Laden der Fotos';
-		} finally {
 			isLoading = false;
+			return;
+		}
+
+		isLoading = false;
+
+		// Die Jahr-/Ort-/GPS-Filter arbeiten clientseitig und benoetigen daher die vollstaendige
+		// Foto-Liste, nicht nur die erste Seite. Weitere Seiten werden im Hintergrund nachgeladen,
+		// damit das Grid sofort nach der ersten Seite sichtbar wird.
+		if (photos.length < total) {
+			void loadRemainingPages(token);
+		}
+	}
+
+	// Laedt sequenziell weitere Seiten nach und haengt sie an `photos` an, solange `token`
+	// noch der aktuellen Generation entspricht (siehe loadToken oben).
+	async function loadRemainingPages(token: number) {
+		isLoadingMore = true;
+		try {
+			let currentPage = page;
+			let loadedPages = 1;
+
+			while (
+				token === loadToken &&
+				photos.length < total &&
+				loadedPages < MAX_BACKGROUND_PAGES &&
+				photos.length < MAX_BACKGROUND_PHOTOS
+			) {
+				currentPage += 1;
+
+				let pageRes: FileListResponse;
+				try {
+					pageRes = await listPhotos(activeFilter, currentPage, limit, searchQuery);
+				} catch {
+					// Hintergrund-Nachladung still abbrechen: die bereits geladene erste Seite bleibt sichtbar
+					break;
+				}
+
+				// Zwischen await und Verarbeitung kann sich die Anfrage geaendert haben (Filter/Suche) -
+				// in diesem Fall abbrechen, ohne die veralteten Seiten anzuhaengen.
+				if (token !== loadToken) return;
+
+				const nextFiles = pageRes.files || [];
+				// Leere Seite: `total` passt nicht zur tatsaechlichen Treffermenge - abbrechen,
+				// statt bis zum Seiten-Limit weiter ins Leere zu paginieren.
+				if (nextFiles.length === 0) {
+					break;
+				}
+
+				photos = [...photos, ...nextFiles];
+				loadedPages += 1;
+			}
+		} finally {
+			if (token === loadToken) {
+				isLoadingMore = false;
+			}
 		}
 	}
 
@@ -75,6 +144,16 @@
 			}
 		}
 		return Array.from(years).sort((a, b) => Number(b) - Number(a));
+	});
+
+	// Faengt veraltete Jahr-Auswahl ab: wenn ein Tab-Wechsel oder eine Suche `photos` ersetzt,
+	// kann die zuvor gewaehlte Option aus `availableYears` verschwinden. Svelte's <select>-Binding
+	// schreibt den Wert in diesem Fall NICHT zurueck (siehe select.js), daher wuerde `selectedYear`
+	// sonst dauerhaft veraltet bleiben und filteredPhotos faelschlich leer filtern.
+	$effect(() => {
+		if (selectedYear !== 'all' && !availableYears.includes(selectedYear)) {
+			selectedYear = 'all';
+		}
 	});
 
 	// Gefilterte Fotos nach Jahr, Ort und GPS
@@ -251,6 +330,11 @@
 		</div>
 	{:else}
 		<PhotoGrid photos={filteredPhotos} onSelectPhoto={openLightbox} />
+		{#if isLoadingMore}
+			<p class="text-xs text-muted-light dark:text-muted-dark text-center py-2">
+				Weitere Fotos werden im Hintergrund geladen …
+			</p>
+		{/if}
 	{/if}
 </div>
 

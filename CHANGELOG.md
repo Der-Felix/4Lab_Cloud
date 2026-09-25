@@ -5,6 +5,41 @@ Alle nennenswerten Änderungen an diesem Projekt werden in dieser Datei dokument
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-09-25
+
+### Behoben
+- **Geocoding-Cache Koordinatenbereich**: `geocoding_cache.lat_rounded` und `lon_rounded` in `deploy/postgres/init.sql` sowie Migration `011_exif_geocoding.sql` von `NUMERIC(6,4)` auf `NUMERIC(9,4)` erweitert, um Numeric-Overflows bei Längengraden bis ±180° zu beheben; inklusive idempotenter `ALTER COLUMN`-Statements für bereits migrierte Datenbanken.
+- **Geocoding Fehler-Logging**: Zuvor verschluckte Fehler beim Einfügen in den Geocoding-Cache in `services/upload-service/src/geocoding.rs` werden nun explizit protokolliert.
+- **EXIF Nenner-Null-Guard & Wertebereich**: Nenner-Null-Guard (Schutz vor `NaN`/`Infinity` durch `kamadak-exif`) sowie Koordinaten-Range-Validierung (Breitengrad [-90, 90], Längengrad [-180, 180]) in `services/upload-service/src/exif.rs` ergänzt; mit Unit-Tests abgesichert.
+- **DSGVO GPS-Opt-Out Fail-Closed**: Fehler bei der Abfrage der `store_gps`-Präferenz verhalten sich nun restriktiv (Fail-Closed) statt Fail-Open; Fehler in `services/app-server/internal/routes/uploads.go` und `services/upload-service/src/routes/thumbnails.rs` werden geloggt und GPS-Metadaten im Zweifel verworfen.
+- **Timeline-Tagesgruppierung**: Zeitzonen-Inkonsistenz in `frontend/src/lib/photos.ts` behoben (Tages-Schlüssel nutzte UTC, Labels lokale Zeit); Fotos werden nun konsistent anhand lokaler Datumsteile gruppiert; Regressionstest für `Europe/Berlin` hinzugefügt.
+- **Lightbox Race Conditions**: Nebenläufige Ladekonflikte bei schnellem Wechseln von Fotos in `frontend/src/lib/components/Lightbox.svelte` (EXIF-Sidebar und Hauptbild) durch Request-Token-Guards behoben.
+- **Fotofilter & Progressive Pagination**: Veralteter Jahr-Filter in `frontend/src/routes/photos/+page.svelte` leerte das Foto-Grid bei neueren Fotos nicht mehr still; progressives Nachladen aller Bibliotheksseiten implementiert, damit Filter die gesamte Medienbibliothek erfassen.
+- **E2E-Kartenassertion**: Assertion in `frontend/tests/photos_exif_map.e2e.ts` prüft nun explizit auf gerenderte Leaflet-Marker (`toHaveCount(2)`) statt unzuverlässigem Timeout.
+
+## [0.2.3] - 2026-09-19
+
+### Behoben
+- **Test-Isolation**: Robuste Isolation für Registrierungstests (`register_first_user_test.go`), um Flakiness bei parallelen Testläufen zu verhindern.
+- **MapPreview-Widget**: Fehlerkorrekturen und optimiertes Re-Rendering der Leaflet-Minikarte auf dem Dashboard (`MapPreview.svelte`).
+- **E2E-Teststabilität**: Lokale Test-Fixtures (`osm_tile.png`, `thumb.jpg`) für deterministisches Mocking im Playwright-Testlauf; Bereinigung von Port-Konflikten in `podman-compose.yml`.
+
+## [0.2.2] - 2026-09-19
+
+### Hinzugefügt
+- **Lightbox EXIF-Seitenleiste**: Ausklappbare Seitenleiste (280px) in `Lightbox.svelte` mit detaillierten EXIF-Kameradaten (Modell, Objektiv, Blende, Verschlusszeit, ISO, Brennweite), Standortanzeige und Schnelllink zur Karte ("Auf Karte zeigen").
+- **Timeline-Gruppierung**: Chronologische Gruppierung der Fotogalerie nach Monaten und Tagen mit Monats- und Tages-Headern sowie Filterleiste nach Jahr, Ort und GPS-Verfügbarkeit.
+- **Karten-Integration (Leaflet)**: Interaktive Vollbild-Kartenansicht (`/photos/map`) mit OpenStreetMap-Kacheln, Leaflet-Markern und Popups für georeferenzierte Fotos; kompaktes Mini-Karten-Vorschau-Widget auf dem Dashboard (`MapPreview.svelte`).
+- **Lokale Leaflet-Assets**: Marker-Icons und Schatten als SVGs lokal im Repository gebündelt ohne externe CDN-Aufrufe.
+
+## [0.2.1] - 2026-09-19
+
+### Hinzugefügt
+- **EXIF-Metadaten-Extraktion**: Vollständiges Parsen von EXIF-Metadaten (Kameramodell, Objektiv, Blende, Verschlusszeit, ISO, Brennweite, Aufnahmedatum, GPS-Koordinaten) im Rust-Upload-Service (`kamadak-exif`).
+- **Reverse-Geocoding (Nominatim)**: Asynchrones, nicht-blockierendes Reverse-Geocoding über self-hosted Nominatim (`mediagis/nominatim:4.5`) im isolierten Backend-Netzwerk mit automatischem Caching in `geocoding_cache` (gerundet auf 4 Nachkommastellen) und Rate-Limiting (1 Req/s).
+- **DSGVO GPS-Opt-Out**: Benutzerindividuelle Einstellung zur Deaktivierung der GPS-Speicherung (`store_gps`-Präferenz); bei Deaktivierung werden GPS-Metadaten vor der Persistierung vollständig entfernt.
+- **Datenbank & API**: Migration `011_exif_geocoding.sql` für Geodaten- und Cache-Tabellen, neue Felder in `files` und neue Go-API-Endpunkte für EXIF/Geodaten.
+
 ## [0.1.1] - 2026-09-18
 
 ### Geändert

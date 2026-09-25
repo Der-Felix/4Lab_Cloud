@@ -83,8 +83,8 @@ CREATE INDEX IF NOT EXISTS idx_files_gps ON files(gps_lat, gps_lon) WHERE gps_la
 -- Reverse-Geocoding Cache (Nominatim)
 CREATE TABLE IF NOT EXISTS geocoding_cache (
     id SERIAL PRIMARY KEY,
-    lat_rounded NUMERIC(6,4) NOT NULL,
-    lon_rounded NUMERIC(6,4) NOT NULL,
+    lat_rounded NUMERIC(9,4) NOT NULL,
+    lon_rounded NUMERIC(9,4) NOT NULL,
     display_name TEXT NOT NULL,
     address_json JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

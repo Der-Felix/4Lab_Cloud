@@ -47,16 +47,35 @@ pub fn dms_to_decimal(degrees: f64, minutes: f64, seconds: f64, ref_char: &str) 
 }
 
 /// Parst Rationals fuer GPS-Koordinaten aus EXIF.
+///
+/// kamadak-exif's `Rational::to_f64` fuehrt keine Nenner-Null-Pruefung durch
+/// (schlicht `num as f64 / denom as f64`), daher liefert ein manipuliertes
+/// oder beschaedigtes GPS-Rational mit Nenner 0 NaN oder Infinity. Solche
+/// Werte werden hier verworfen, damit sie nicht weiter in ExifGps, die
+/// Nominatim-URL oder die Datenbank gelangen.
 pub fn parse_gps_coord(field: &exif::Field, ref_str: &str) -> Option<f64> {
     match &field.value {
         exif::Value::Rational(vec) if vec.len() >= 3 => {
             let deg = vec[0].to_f64();
             let min = vec[1].to_f64();
             let sec = vec[2].to_f64();
-            Some(dms_to_decimal(deg, min, sec, ref_str))
+            if !deg.is_finite() || !min.is_finite() || !sec.is_finite() {
+                return None;
+            }
+            let dec = dms_to_decimal(deg, min, sec, ref_str);
+            if !dec.is_finite() {
+                return None;
+            }
+            Some(dec)
         }
         _ => None,
     }
+}
+
+/// Prueft, ob ein Koordinatenpaar endlich und im gueltigen Wertebereich liegt
+/// (Breite [-90, 90], Laenge [-180, 180]).
+fn is_valid_coord(lat: f64, lon: f64) -> bool {
+    lat.is_finite() && lon.is_finite() && (-90.0..=90.0).contains(&lat) && (-180.0..=180.0).contains(&lon)
 }
 
 /// Entfernt GPS-Daten aus den EXIF-Informationen (DSGVO Opt-out).
@@ -159,26 +178,37 @@ pub fn extract_exif(bytes: &[u8]) -> Option<ExifData> {
             parse_gps_coord(&lat_f, &lat_ref),
             parse_gps_coord(&lon_f, &lon_ref),
         ) {
-            let altitude = alt_field.and_then(|f| match &f.value {
-                exif::Value::Rational(vec) if !vec.is_empty() => {
-                    let mut alt = vec[0].to_f64();
-                    if alt_ref == 1 {
-                        alt = -alt;
-                    }
-                    Some((alt * 10.0).round() / 10.0)
-                }
-                _ => None,
-            });
-
             // 4 Nachkommastellen runden fuer einheitliche Praezision (~11 Meter)
             let lat_rounded = (lat * 10000.0).round() / 10000.0;
             let lon_rounded = (lon * 10000.0).round() / 10000.0;
 
-            data.gps = Some(ExifGps {
-                lat: lat_rounded,
-                lon: lon_rounded,
-                altitude,
-            });
+            if is_valid_coord(lat_rounded, lon_rounded) {
+                let altitude = alt_field.and_then(|f| match &f.value {
+                    exif::Value::Rational(vec) if !vec.is_empty() => {
+                        let mut alt = vec[0].to_f64();
+                        if alt_ref == 1 {
+                            alt = -alt;
+                        }
+                        if !alt.is_finite() {
+                            return None;
+                        }
+                        Some((alt * 10.0).round() / 10.0)
+                    }
+                    _ => None,
+                });
+
+                data.gps = Some(ExifGps {
+                    lat: lat_rounded,
+                    lon: lon_rounded,
+                    altitude,
+                });
+            } else {
+                tracing::warn!(
+                    lat = lat_rounded,
+                    lon = lon_rounded,
+                    "ungueltige GPS-Koordinate in EXIF verworfen"
+                );
+            }
         }
     }
 
@@ -208,6 +238,38 @@ mod tests {
         let w_lon = dms_to_decimal(122.0, 25.0, 0.0, "W");
         assert!(w_lon < 0.0);
         assert!((w_lon - (-122.4167)).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_parse_gps_coord_zero_denominator_yields_none() {
+        // kamadak-exif's Rational::to_f64 hat keine Nenner-Null-Pruefung und
+        // liefert bei denom = 0 NaN/Infinity. parse_gps_coord muss das abfangen.
+        let field = exif::Field {
+            tag: exif::Tag::GPSLatitude,
+            ifd_num: exif::In::PRIMARY,
+            value: exif::Value::Rational(vec![
+                exif::Rational { num: 47, denom: 1 },
+                exif::Rational { num: 22, denom: 1 },
+                exif::Rational { num: 1, denom: 0 },
+            ]),
+        };
+
+        assert_eq!(parse_gps_coord(&field, "N"), None);
+    }
+
+    #[test]
+    fn test_is_valid_coord_rejects_out_of_range() {
+        // Gueltige Koordinaten (Zuerich)
+        assert!(is_valid_coord(47.3769, 8.5417));
+
+        // Ausserhalb des gueltigen Wertebereichs
+        assert!(!is_valid_coord(91.0, 8.5417));
+        assert!(!is_valid_coord(47.3769, 181.0));
+        assert!(!is_valid_coord(-91.0, -8.5417));
+
+        // Nicht endliche Werte (z.B. aus einem Nenner-Null-Rational)
+        assert!(!is_valid_coord(f64::NAN, 8.5417));
+        assert!(!is_valid_coord(47.3769, f64::INFINITY));
     }
 
     #[test]

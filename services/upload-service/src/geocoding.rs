@@ -155,7 +155,7 @@ impl GeocodingClient {
 
         // 4. In Cache-Tabelle speichern
         if let Some(ref pool) = self.db_pool {
-            let _ = sqlx::query(
+            let insert_result = sqlx::query(
                 "INSERT INTO geocoding_cache (lat_rounded, lon_rounded, display_name, address_json)
                  VALUES ($1::numeric, $2::numeric, $3, $4)
                  ON CONFLICT (lat_rounded, lon_rounded) DO NOTHING"
@@ -166,6 +166,18 @@ impl GeocodingClient {
             .bind(&address)
             .execute(pool)
             .await;
+
+            // Ein fehlgeschlagenes Cache-Schreiben darf die Anfrage nicht scheitern
+            // lassen (Geocoding war erfolgreich) - aber der Fehler muss sichtbar sein,
+            // sonst bleibt ein zugrundeliegender Schema-Fehler unbemerkt.
+            if let Err(e) = insert_result {
+                tracing::warn!(
+                    error = %e,
+                    lat = lat_rounded,
+                    lon = lon_rounded,
+                    "geocoding cache-schreibvorgang fehlgeschlagen, geocoding aber erfolgreich"
+                );
+            }
         }
 
         Ok(Some(result))

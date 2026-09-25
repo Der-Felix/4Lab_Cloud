@@ -322,7 +322,12 @@ test.describe('Timeline, EXIF-Sidebar & Map Integration (v0.2.2)', () => {
 
 		// Warte auf Leaflet Mini-Map Render
 		await page.waitForSelector('.leaflet-container', { state: 'visible', timeout: 5000 });
-		await page.waitForTimeout(1000);
+
+		// Verifiziere, dass die beiden gemockten GPS-Fotos tatsaechlich als Marker gerendert wurden
+		// (L.icon() in map.ts vergibt die Standard-Leaflet-Klasse "leaflet-marker-icon"; ein Test, der
+		// nur .leaflet-container prueft, wuerde auch bei komplett kaputter Marker-Erzeugung gruen bleiben,
+		// da dieser Container schon bei einer leeren Karte existiert).
+		await expect(page.locator('.leaflet-marker-icon')).toHaveCount(2);
 
 		// Screenshot fuer Dashboard mit Mini-Karte
 		await page.screenshot({ path: '../docs/screenshots/dashboard-map-preview.png', fullPage: true });

@@ -94,8 +94,12 @@ pub async fn generate_thumbnail(
             let store_gps_allowed = match payload.store_gps {
                 Some(allowed) => allowed,
                 None => {
-                    // Falls nicht im Payload uebergeben, aus der Datenbank pruefen
-                    let mut allowed = true;
+                    // Falls nicht im Payload uebergeben, aus der Datenbank pruefen.
+                    // DSGVO: Fail-closed - falls die Praeferenz nicht ermittelt werden
+                    // kann (Fehler oder keine Zeile in beiden Lookups), wird GPS entfernt.
+                    let mut allowed = false;
+                    let mut determined = false;
+
                     let row = sqlx::query(
                         "SELECT u.store_gps FROM users u \
                          JOIN upload_sessions s ON s.user_id = u.id \
@@ -107,6 +111,7 @@ pub async fn generate_thumbnail(
 
                     if let Ok(Some(r)) = row {
                         allowed = r.get("store_gps");
+                        determined = true;
                     } else {
                         let row2 = sqlx::query(
                             "SELECT u.store_gps FROM users u \
@@ -118,8 +123,17 @@ pub async fn generate_thumbnail(
                         .await;
                         if let Ok(Some(r2)) = row2 {
                             allowed = r2.get("store_gps");
+                            determined = true;
                         }
                     }
+
+                    if !determined {
+                        tracing::warn!(
+                            file_id = %id,
+                            "store_gps-Praeferenz konnte nicht ermittelt werden (Fehler oder keine Zeile in beiden Lookups); GPS wird sicherheitshalber entfernt"
+                        );
+                    }
+
                     allowed
                 }
             };
