@@ -6,7 +6,7 @@
 	import { Button, Input } from '$lib/components/ui';
 	import { login } from '$lib/auth';
 	import { addToast } from '$lib/stores';
-	import { ShieldCheck, Lock, AlertCircle } from '@lucide/svelte';
+	import { AlertCircle } from '@lucide/svelte';
 
 	let email = $state('');
 	let password = $state('');
@@ -112,18 +112,4 @@
 		</div>
 	</div>
 
-	<!-- Sicherheits-Banner unter der Karte -->
-	<div class="mt-6 flex items-center justify-center gap-4 text-[11px] text-muted-light dark:text-muted-dark">
-		<span class="inline-flex items-center gap-1">
-			<ShieldCheck class="w-3.5 h-3.5 text-accent" />
-			<span>AES-256-GCM</span>
-		</span>
-		<span>•</span>
-		<span class="inline-flex items-center gap-1">
-			<Lock class="w-3.5 h-3.5 text-primary-light" />
-			<span>TLS 1.3</span>
-		</span>
-		<span>•</span>
-		<span>Keine Tracker</span>
-	</div>
 </div>

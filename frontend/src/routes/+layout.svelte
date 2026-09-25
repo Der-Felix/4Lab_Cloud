@@ -1,6 +1,6 @@
 <script lang="ts">
 	import './layout.css';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import Logo from '$lib/components/Logo.svelte';
@@ -39,7 +39,14 @@
 	let { children } = $props();
 
 	// Sidebar-Zustand (Standard: 240px ausgeklappt, via Cookie persistiert)
+	// Vom Nutzer gewaehlte Praeferenz (Cookie). Gilt nur auf breiten Viewports.
 	let isCollapsed = $state(false);
+	// Auf schmalen Viewports (< md) wuerde die 240px breite Sidebar den Grossteil
+	// des Bildschirms belegen und den Header aus der Breite draengen. Dort wird
+	// unabhaengig von der Praeferenz immer eingeklappt dargestellt.
+	let isNarrow = $state(false);
+	let uiCollapsed = $derived(isNarrow || isCollapsed);
+	let cleanupNarrowListener: (() => void) | null = null;
 	let isDarkMode = $state(true);
 	let searchQuery = $state('');
 
@@ -92,6 +99,15 @@
 		// Sidebar-Zustand aus Cookie lesen
 		isCollapsed = getSidebarCookie();
 
+		// Viewport-Breite beobachten, damit die Sidebar auf Handys eingeklappt bleibt
+		const narrowQuery = window.matchMedia('(max-width: 767px)');
+		isNarrow = narrowQuery.matches;
+		const onNarrowChange = (e: MediaQueryListEvent) => {
+			isNarrow = e.matches;
+		};
+		narrowQuery.addEventListener('change', onNarrowChange);
+		cleanupNarrowListener = () => narrowQuery.removeEventListener('change', onNarrowChange);
+
 		// Auth Session pruefen
 		const loggedIn = await initializeSession();
 		if (!loggedIn && !isAuthPage) {
@@ -99,6 +115,11 @@
 		} else if (loggedIn && (page.url.pathname === '/login' || page.url.pathname === '/register')) {
 			goto('/');
 		}
+	});
+
+	onDestroy(() => {
+		cleanupNarrowListener?.();
+		cleanupNarrowListener = null;
 	});
 
 	function toggleTheme() {
@@ -210,26 +231,30 @@
 	<div class="min-h-[100dvh] flex bg-bg-light dark:bg-bg-dark text-text-light dark:text-text-dark font-sans antialiased">
 		<!-- Sidebar (Seafile/Nextcloud-Struktur, 240px <-> 64px) -->
 		<aside
-			class="shrink-0 flex flex-col justify-between border-r border-border-light dark:border-border-dark bg-sidebar-light dark:bg-surface-dark transition-[width] duration-200 ease-in-out z-40 sticky top-0 h-screen select-none {isCollapsed ? 'w-16' : 'w-60'}"
+			class="shrink-0 flex flex-col justify-between border-r border-border-light dark:border-border-dark bg-sidebar-light dark:bg-surface-dark transition-[width] duration-200 ease-in-out z-40 sticky top-0 h-screen select-none {uiCollapsed ? 'w-16' : 'w-60'}"
 		>
 			<!-- Oberer Bereich: Logo (64px) & Collapse-Toggle oben rechts immer sichtbar -->
 			<div>
-				<div class="h-16 flex items-center border-b border-border-light dark:border-border-dark {isCollapsed ? 'justify-between px-2.5' : 'justify-between px-3.5'}">
+				<div class="h-16 flex items-center border-b border-border-light dark:border-border-dark {uiCollapsed ? 'justify-between px-2.5' : 'justify-between px-3.5'}">
 					<a href="/" class="flex items-center overflow-hidden focus:outline-hidden" title="4LabCloud">
-						{#if isCollapsed}
+						{#if uiCollapsed}
 							<Logo size={24} showWordmark={false} />
 						{:else}
 							<Logo size={28} showWordmark={true} />
 						{/if}
 					</a>
+					<!-- Unterhalb md ist die Sidebar zwangsweise eingeklappt (siehe isNarrow).
+					     Der Schalter wird dort ausgeblendet, statt einen Zustand anzubieten,
+					     den er nicht herstellen kann: er wuerde nur die Desktop-Praeferenz
+					     aendern, ohne sichtbare Wirkung. -->
 					<button
 						type="button"
 						onclick={toggleSidebar}
-						class="p-1.5 rounded-lg text-muted-light dark:text-muted-dark hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-						aria-label={isCollapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen'}
-						title={isCollapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen'}
+						class="hidden md:inline-flex p-1.5 rounded-lg text-muted-light dark:text-muted-dark hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+						aria-label={uiCollapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen'}
+						title={uiCollapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen'}
 					>
-						{#if isCollapsed}
+						{#if uiCollapsed}
 							<IconLayoutSidebarLeftExpand size={18} stroke={1.75} />
 						{:else}
 							<IconLayoutSidebarLeftCollapse size={18} stroke={1.75} />
@@ -241,8 +266,8 @@
 				<nav class="p-2 space-y-4 mt-2">
 					{#each navGroups as group}
 						<div>
-							{#if !isCollapsed}
-								<div class="text-[10px] font-semibold uppercase tracking-wider text-muted-light dark:text-muted-dark mb-2 ml-3 select-none">
+							{#if !uiCollapsed}
+								<div class="text-3xs font-semibold uppercase tracking-wider text-muted-light dark:text-muted-dark mb-2 ml-3 select-none">
 									{group.title}
 								</div>
 							{/if}
@@ -253,7 +278,7 @@
 									{@const OutlineIcon = item.iconOutline}
 									{@const FilledIcon = item.iconFilled}
 
-									{#if isCollapsed}
+									{#if uiCollapsed}
 										<Tooltip text={item.label} position="right" class="w-full flex justify-center">
 											<a
 												href={item.href}
@@ -298,7 +323,7 @@
 			<!-- Unterer Bereich: User-Bereich, Theme-Toggle & Logout -->
 			<div class="p-2 border-t border-border-light dark:border-border-dark space-y-2">
 				<!-- Theme Toggle -->
-				{#if isCollapsed}
+				{#if uiCollapsed}
 					<Tooltip text={isDarkMode ? 'Heller Modus' : 'Dunkler Modus'} position="right" class="w-full flex justify-center">
 						<button
 							type="button"
@@ -335,7 +360,7 @@
 				{/if}
 
 				<!-- User-Bereich unten: Avatar 40px, Email + Rolle 2-Zeiler, Logout-Icon rechts -->
-				{#if isCollapsed}
+				{#if uiCollapsed}
 					<Tooltip text={$currentUser?.email ? `${$currentUser.email} (Abmelden)` : 'Abmelden'} position="right" class="w-full flex justify-center">
 						<button
 							type="button"
@@ -354,7 +379,7 @@
 								<p class="text-xs font-semibold truncate text-text-light dark:text-text-dark leading-tight">
 									{$currentUser?.email || 'Benutzer'}
 								</p>
-								<p class="text-[10px] text-muted-light dark:text-muted-dark mt-0.5 leading-tight">
+								<p class="text-3xs text-muted-light dark:text-muted-dark mt-0.5 leading-tight">
 									{$currentUser?.isAdmin ? 'Administrator' : 'Benutzer'}
 								</p>
 							</div>
@@ -377,23 +402,24 @@
 		<div class="flex-1 flex flex-col min-w-0 overflow-x-hidden">
 			<!-- Sticky Header -->
 			<header
-				class="h-16 sticky top-0 z-30 flex items-center justify-between px-6 border-b border-border-light dark:border-border-dark bg-surface-light/85 dark:bg-surface-dark/85 backdrop-blur-md"
+				class="h-16 sticky top-0 z-30 flex items-center justify-between gap-3 px-4 sm:px-6 border-b border-border-light dark:border-border-dark bg-surface-light/85 dark:bg-surface-dark/85 backdrop-blur-md"
 			>
-				<!-- Breadcrumbs (klein, muted) -->
-				<div class="flex items-center gap-1.5 text-xs text-muted-light dark:text-muted-dark">
-					<a href="/" class="hover:text-text-light dark:hover:text-text-dark transition-colors">
+				<!-- Breadcrumbs (klein, muted) - muss schrumpfen duerfen, sonst sprengt der
+				     Header auf schmalen Viewports die Breite -->
+				<div class="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-muted-light dark:text-muted-dark">
+					<a href="/" class="hidden shrink-0 hover:text-text-light dark:hover:text-text-dark transition-colors sm:inline">
 						4labscloud
 					</a>
-					<IconChevronRight size={14} stroke={1.75} class="opacity-60" />
-					<span class="font-semibold text-text-light dark:text-text-dark">
+					<IconChevronRight size={14} stroke={1.75} class="hidden shrink-0 opacity-60 sm:block" />
+					<span class="truncate font-semibold text-text-light dark:text-text-dark">
 						{currentTitle}
 					</span>
 				</div>
 
-				<!-- Rechte Sektion: Globale Suche (240px), Glocke, Avatar-Dropdown -->
-				<div class="flex items-center gap-3">
-					<!-- Globale Dateisuche (exakt 240px) -->
-					<div class="relative w-60">
+				<!-- Rechte Sektion: Globale Suche, Glocke, Avatar-Dropdown -->
+				<div class="flex shrink-0 items-center gap-2 sm:gap-3">
+					<!-- Globale Dateisuche: Breite skaliert mit dem Viewport -->
+					<div class="relative w-32 sm:w-44 lg:w-60">
 						<IconSearch size={18} stroke={1.75} class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark pointer-events-none" />
 						<input
 							type="text"
@@ -431,7 +457,7 @@
 							<p class="text-xs font-semibold truncate text-text-light dark:text-text-dark">
 								{$currentUser?.email || 'Benutzer'}
 							</p>
-							<p class="text-[11px] text-muted-light dark:text-muted-dark mt-0.5">
+							<p class="text-2xs text-muted-light dark:text-muted-dark mt-0.5">
 								{$currentUser?.isAdmin ? 'Administrator' : 'Standardbenutzer'}
 							</p>
 						</div>

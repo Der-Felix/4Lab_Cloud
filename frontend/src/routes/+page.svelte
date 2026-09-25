@@ -14,6 +14,7 @@
 	import { listShares, type ShareItem } from '$lib/shares';
 	import { getMyAuditLogs, type AuditLogItem } from '$lib/admin';
 	import Card from '$lib/components/ui/Card.svelte';
+	import Dropdown from '$lib/components/ui/Dropdown.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import FileCard from '$lib/components/dashboard/FileCard.svelte';
@@ -26,8 +27,6 @@
 		ArrowRight,
 		Share2,
 		HardDrive,
-		ShieldCheck,
-		CheckCircle2,
 		Lock,
 		Globe,
 		ExternalLink,
@@ -36,7 +35,9 @@
 		FileSpreadsheet,
 		FileVideo,
 		FileAudio,
-		File as FileIcon
+		File as FileIcon,
+		SlidersHorizontal,
+		Check
 	} from '@lucide/svelte';
 
 	let recentFiles = $state<FileItem[]>([]);
@@ -50,6 +51,59 @@
 	let totalFiles = $state<number>(0);
 	let isLoading = $state<boolean>(true);
 	let activeTab = $state<'all' | 'files' | 'images' | 'documents'>('all');
+
+	// Ein-/ausblendbare Dashboard-Bereiche. Bewusst im localStorage und nicht im
+	// Backend: das ist eine reine Ansichtseinstellung und braucht keine Migration.
+	const SECTION_STORAGE_KEY = '4lab:dashboard:sections';
+	const SECTION_LABELS: { key: SectionKey; label: string }[] = [
+		{ key: 'hero', label: 'Begrüßung' },
+		{ key: 'kpis', label: 'Kennzahlen' },
+		{ key: 'recent', label: 'Zuletzt verwendet' },
+		{ key: 'activity', label: 'Letzte Aktivität' },
+		{ key: 'shares', label: 'Freigaben' },
+		{ key: 'map', label: 'Fotokarte' }
+	];
+	type SectionKey = 'hero' | 'kpis' | 'recent' | 'activity' | 'shares' | 'map';
+	let sections = $state<Record<SectionKey, boolean>>({
+		hero: true,
+		kpis: true,
+		recent: true,
+		activity: true,
+		shares: true,
+		map: true
+	});
+
+	function loadSections() {
+		if (typeof localStorage === 'undefined') return;
+		try {
+			const raw = localStorage.getItem(SECTION_STORAGE_KEY);
+			if (!raw) return;
+			const parsed = JSON.parse(raw);
+			for (const { key } of SECTION_LABELS) {
+				if (typeof parsed?.[key] === 'boolean') sections[key] = parsed[key];
+			}
+		} catch {
+			// Defekter oder blockierter Speicher: Standardansicht beibehalten
+		}
+	}
+
+	function toggleSection(key: SectionKey) {
+		sections[key] = !sections[key];
+		try {
+			localStorage.setItem(SECTION_STORAGE_KEY, JSON.stringify(sections));
+		} catch {
+			// Speichern fehlgeschlagen (privater Modus): Umschalten wirkt trotzdem fuer diese Sitzung
+		}
+	}
+
+	function resetSections() {
+		for (const { key } of SECTION_LABELS) sections[key] = true;
+		try {
+			localStorage.setItem(SECTION_STORAGE_KEY, JSON.stringify(sections));
+		} catch {
+			// s.o.
+		}
+	}
 
 	// Dialog-Zustaende
 	let fileToShare = $state<FileItem | null>(null);
@@ -99,6 +153,7 @@
 	});
 
 	onMount(async () => {
+		loadSections();
 		await loadDashboardData();
 	});
 
@@ -248,9 +303,61 @@
 	}
 </script>
 
-<div class="space-y-6">
-	<!-- 1. Hero-Banner (280px hoch, echtes hero-default.jpg als object-cover mit rgba(0,0,0,0.4) Overlay) -->
-	<div class="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark h-[280px] flex items-center justify-between p-6 sm:p-8 card-depth shadow-depth">
+<div class="space-y-5">
+	<!-- 0. Ansicht anpassen: Bereiche einzeln ab-/zuschaltbar. Bleibt immer sichtbar,
+	     damit abgeschaltete Bereiche wieder erreichbar sind. -->
+	<div class="flex items-center justify-end -mb-1">
+		<Dropdown align="right" width="w-60">
+			{#snippet trigger()}
+				<button
+					type="button"
+					class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-muted-light dark:text-muted-dark hover:text-text-light dark:hover:text-text-dark hover:bg-slate-100 dark:hover:bg-surface-dark transition-colors cursor-pointer"
+					aria-label="Dashboard anpassen"
+				>
+					<SlidersHorizontal class="w-3.5 h-3.5" />
+					<span>Anpassen</span>
+				</button>
+			{/snippet}
+
+			<div class="px-3 py-2 border-b border-border-light dark:border-border-dark">
+				<p class="text-xs font-semibold text-text-light dark:text-text-dark">Bereiche anzeigen</p>
+			</div>
+			<div class="py-1">
+				{#each SECTION_LABELS as item}
+					<button
+						type="button"
+						onclick={() => toggleSection(item.key)}
+						class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
+					>
+						<span>{item.label}</span>
+						<span
+							class="w-4 h-4 rounded border flex items-center justify-center shrink-0 {sections[item.key]
+								? 'bg-primary border-primary text-white'
+								: 'border-border-light dark:border-border-dark'}"
+						>
+							{#if sections[item.key]}
+								<Check class="w-3 h-3" />
+							{/if}
+						</span>
+					</button>
+				{/each}
+			</div>
+			<div class="px-3 py-2 border-t border-border-light dark:border-border-dark">
+				<button
+					type="button"
+					onclick={resetSections}
+					class="text-xs text-primary dark:text-primary-light hover:underline cursor-pointer"
+				>
+					Alle anzeigen
+				</button>
+			</div>
+		</Dropdown>
+	</div>
+
+	{#if sections.hero}
+	<!-- 1. Hero-Banner. Hoehe haengt an der Viewport-Hoehe (clamp mit vh) statt an
+	     festen 280px - auf einem 14-Zoll-Laptop frass der Hero sonst 35% des Bildes. -->
+	<div class="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark h-[clamp(150px,21vh,260px)] flex items-center justify-between p-5 sm:p-7 card-depth shadow-depth">
 		<!-- Hintergrundfoto mit dunklem Overlay fuer Barrierefreiheit -->
 		<img
 			src="/assets/hero-default.jpg"
@@ -260,16 +367,18 @@
 		<div class="absolute inset-0 bg-black/40"></div>
 
 		<!-- Links: Begruessung & 2 Buttons mit Backdrop-Blur -->
-		<div class="relative z-10 max-w-lg backdrop-blur-md bg-black/25 p-5 sm:p-6 rounded-xl border border-white/15 shadow-depth">
-			<h1 class="text-2xl sm:text-[30px] font-bold tracking-tight text-white leading-tight drop-shadow-sm">
+		<!-- min-w-0: ohne das schrumpft die Karte nicht unter ihre Inhaltsbreite und
+		     ragt auf schmalen Viewports aus dem Hero heraus -->
+		<div class="relative z-10 min-w-0 max-w-lg backdrop-blur-md bg-black/25 p-5 sm:p-6 rounded-xl border border-white/15 shadow-depth">
+			<h1 class="text-xl sm:text-2xl xl:text-[28px] font-bold tracking-tight text-white leading-tight drop-shadow-sm">
 				Schön, dich wieder zu sehen, {userName}!
 			</h1>
-			<p class="mt-1.5 text-sm sm:text-base text-white/85 leading-normal">
+			<p class="mt-1 text-xs sm:text-sm text-white/85 leading-normal">
 				Deine Dateien, Fotos und Projekte an einem sicheren Ort.
 			</p>
 
 			<!-- 2 Quick-Action-Buttons -->
-			<div class="mt-4 sm:mt-5 flex items-center gap-3">
+			<div class="mt-3 sm:mt-4 flex items-center gap-3">
 				<Button href="/files/upload" variant="primary" size="md">
 					<Upload class="w-4 h-4 mr-2" />
 					<span>Dateien hochladen</span>
@@ -289,21 +398,105 @@
 
 		<!-- Rechts: Prominenter Slogan in Great Vibes mit weicher Schattierung -->
 		<div class="hidden md:flex flex-col items-end justify-center relative z-10 pr-4 select-none pointer-events-none">
-			<span class="font-calligraphic text-3xl lg:text-4xl text-white tracking-wide block drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+			<!-- text-balance verhindert den Umbruch mitten im Satz ("Deine Daten. Deine / Freiheit.") -->
+			<span class="font-calligraphic text-2xl lg:text-3xl text-white tracking-wide block text-right text-balance drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
 				Deine Daten. Deine Freiheit.
 			</span>
-			<span class="text-[11px] font-sans tracking-widest uppercase text-white/80 mt-1 block drop-shadow-xs">
+			<span class="text-2xs font-sans tracking-widest uppercase text-white/80 mt-1 block drop-shadow-xs">
 				Private Cloud Platform
 			</span>
 		</div>
 	</div>
+	{/if}
 
-	<!-- 2. Hauptbereich: Breiteres 2-Spalten-Layout (Flexibel + 320px Sidebar) -->
-	<div class="flex flex-col lg:flex-row gap-6 items-start">
-		<!-- Linke Spalte: "Zuletzt verwendet" mit Tabs & dynamischem Kachel-Grid -->
-		<div class="flex-1 min-w-0 space-y-4">
+	<!-- 2. Kennzahlen: vier kompakte Kacheln. Vorher belegten Speicherplatz und
+	     Freigaben je eine grosse, fast leere Karte in einer starren Seitenspalte. -->
+	{#if sections.kpis}
+	<div class="grid grid-cols-2 xl:grid-cols-4 gap-3.5">
+		<!-- Speicherplatz inkl. Auslastungsbalken -->
+		<div class="p-3.5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark card-depth shadow-depth">
+			<div class="flex items-center justify-between gap-2">
+				<div class="flex items-center gap-2 min-w-0">
+					<div class="p-1.5 rounded-lg bg-accent/15 text-accent shrink-0">
+						<HardDrive class="w-4 h-4" />
+					</div>
+					<span class="text-xs font-medium text-muted-light dark:text-muted-dark truncate">Speicherplatz</span>
+				</div>
+				<span class="text-xs font-semibold tabular-nums text-text-light dark:text-text-dark shrink-0">
+					{displayPercent}
+				</span>
+			</div>
+			<div class="mt-3 w-full h-1.5 rounded-full bg-slate-100 dark:bg-bg-dark overflow-hidden">
+				<div
+					class="h-full bg-primary rounded-full transition-all duration-300"
+					style="width: {Math.max(quota.used_bytes > 0 ? 1 : 0, Math.min(100, quota.percent))}%"
+				></div>
+			</div>
+			<p class="mt-1.5 text-2xs text-muted-light dark:text-muted-dark tabular-nums">
+				{formatBytes(quota.used_bytes)} von {formatBytes(quota.total_bytes)}
+			</p>
+		</div>
+
+		<!-- Dateien -->
+		<a
+			href="/files"
+			class="p-3.5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark card-depth shadow-depth transition-colors hover:border-primary/50 flex flex-col justify-between"
+		>
+			<div class="flex items-center gap-2 min-w-0">
+				<div class="p-1.5 rounded-lg bg-primary/15 text-primary dark:text-primary-light shrink-0">
+					<FileIcon class="w-4 h-4" />
+				</div>
+				<span class="text-xs font-medium text-muted-light dark:text-muted-dark truncate">Dateien</span>
+			</div>
+			<p class="mt-2 text-xl font-semibold tabular-nums text-text-light dark:text-text-dark leading-none">
+				{totalFiles}
+			</p>
+			<p class="mt-1.5 text-2xs text-muted-light dark:text-muted-dark">insgesamt gespeichert</p>
+		</a>
+
+		<!-- Freigaben -->
+		<a
+			href="/shares"
+			class="p-3.5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark card-depth shadow-depth transition-colors hover:border-amber/50 flex flex-col justify-between"
+		>
+			<div class="flex items-center gap-2 min-w-0">
+				<div class="p-1.5 rounded-lg bg-amber/15 text-amber shrink-0">
+					<Share2 class="w-4 h-4" />
+				</div>
+				<span class="text-xs font-medium text-muted-light dark:text-muted-dark truncate">Freigaben</span>
+			</div>
+			<p class="mt-2 text-xl font-semibold tabular-nums text-text-light dark:text-text-dark leading-none">
+				{shares.length}
+			</p>
+			<p class="mt-1.5 text-2xs text-muted-light dark:text-muted-dark">
+				{shares.length === 0 ? 'noch nichts geteilt' : 'aktive Links'}
+			</p>
+		</a>
+
+		<!-- Aktivitaeten -->
+		<div class="p-3.5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark card-depth shadow-depth flex flex-col justify-between">
+			<div class="flex items-center gap-2 min-w-0">
+				<div class="p-1.5 rounded-lg bg-primary/15 text-primary dark:text-primary-light shrink-0">
+					<Activity class="w-4 h-4" />
+				</div>
+				<span class="text-xs font-medium text-muted-light dark:text-muted-dark truncate">Aktivität</span>
+			</div>
+			<p class="mt-2 text-xl font-semibold tabular-nums text-text-light dark:text-text-dark leading-none">
+				{activityLogs.length}
+			</p>
+			<p class="mt-1.5 text-2xs text-muted-light dark:text-muted-dark">protokollierte Ereignisse</p>
+		</div>
+	</div>
+	{/if}
+
+	<!-- 3. Zuletzt verwendet (2/3) neben der Aktivitaetsliste (1/3). Die Kacheln
+	     fuellen dadurch ihre Zeile, statt in voller Breite zu verlaufen. -->
+	{#if sections.recent || sections.activity}
+	<div class="grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
+		{#if sections.recent}
+		<!-- Ohne Aktivitaetsspalte darf der Bereich die volle Breite nutzen -->
+		<div class="{sections.activity ? 'xl:col-span-2' : 'xl:col-span-3'} min-w-0 space-y-4">
 			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-border-light dark:border-border-dark">
-				<!-- Section-Header mit 2x16px Akzentbalken (Primary) -->
 				<div class="flex items-center gap-2.5">
 					<div class="w-0.5 h-4 rounded-full bg-primary shrink-0"></div>
 					<h2 class="text-lg font-semibold text-text-light dark:text-text-dark">
@@ -344,15 +537,13 @@
 				</div>
 			</div>
 
-			<!-- Dynamisches Kachel-Grid (4 Spalten, 5 bei xl) -->
 			{#if isLoading}
-				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-					{#each Array(10) as _}
+				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3.5">
+					{#each Array(8) as _}
 						<div class="aspect-4/5 rounded-xl bg-slate-200/70 dark:bg-slate-800/60 animate-skeleton"></div>
 					{/each}
 				</div>
 			{:else if filteredFiles.length === 0}
-				<!-- Empty-State mit Illustration: nur sichtbar wenn Liste leer ist -->
 				<div class="p-8 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-center flex flex-col items-center justify-center card-depth shadow-depth">
 					<img src="/assets/illustrations/empty-files.svg" alt="Keine Dateien" class="w-48 h-36 mb-3 select-none" />
 					<p class="text-sm font-semibold text-text-light dark:text-text-dark">
@@ -367,8 +558,8 @@
 					</Button>
 				</div>
 			{:else}
-				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-					{#each filteredFiles.slice(0, 10) as file (file.id)}
+				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3.5">
+					{#each filteredFiles.slice(0, 8) as file (file.id)}
 						<FileCard
 							{file}
 							ondownload={handleDownload}
@@ -378,220 +569,139 @@
 					{/each}
 				</div>
 
-				<div class="pt-2 text-right">
-					<a
-						href="/files"
-						class="text-xs font-medium text-primary dark:text-primary-light hover:underline inline-flex items-center gap-1"
-					>
-						<span>Alle {totalFiles} Dateien anzeigen</span>
-						<ArrowRight class="w-3.5 h-3.5" />
-					</a>
-				</div>
-			{/if}
-		</div>
-
-		<!-- Rechte Spalte: Sidebar-Karten (w-80 / 320px) mit Tiefe & Akzenten -->
-		<div class="w-full lg:w-80 shrink-0 space-y-6">
-			<!-- Karte 1: Ihre Freigaben (mit Akzentbalken Amber & Kategorie-Icons) -->
-			<Card class="p-5">
-				<div class="flex items-center justify-between pb-3 border-b border-border-light dark:border-border-dark">
-					<div class="flex items-center gap-2.5">
-						<div class="w-0.5 h-4 rounded-full bg-amber shrink-0"></div>
-						<div class="p-1.5 rounded-lg bg-amber/15 text-amber">
-							<Share2 class="w-4 h-4" />
-						</div>
-						<h3 class="font-semibold text-sm text-text-light dark:text-text-dark">
-							Ihre Freigaben
-						</h3>
-					</div>
-					<Badge variant="neutral" size="sm">
-						<span class="tabular-nums">{shares.length}</span>
-					</Badge>
-				</div>
-
-				<div class="mt-4">
-					{#if isLoading}
-						<div class="space-y-2.5">
-							{#each Array(3) as _}
-								<div class="h-12 bg-slate-200/70 dark:bg-slate-800/60 animate-skeleton rounded-lg"></div>
-							{/each}
-						</div>
-					{:else if shares.length === 0}
-						<!-- Empty-State mit Illustration -->
-						<div class="py-6 text-center text-xs text-muted-light dark:text-muted-dark flex flex-col items-center justify-center">
-							<img src="/assets/illustrations/empty-shares.svg" alt="Keine Freigaben" class="w-36 h-28 mb-2 select-none opacity-80" />
-							<p class="font-medium text-text-light dark:text-text-dark">Noch keine Freigaben</p>
-							<p class="mt-1 text-[11px]">Geben Sie Dateien über das Kontextmenü frei.</p>
-						</div>
-					{:else}
-						<div class="space-y-2.5 divide-y divide-border-light dark:divide-border-dark -my-1">
-							{#each shares.slice(0, 4) as share}
-								{@const fileInfo = getShareFileInfo(share.filename)}
-								{@const FileTypeIcon = fileInfo.icon}
-								<div class="pt-2.5 first:pt-0 flex items-center justify-between gap-3 text-xs">
-									<div class="min-w-0 flex-1 flex items-center gap-2.5">
-										<!-- Kategorie-farbiges Datei-Icon -->
-										<div class="p-1 rounded-md bg-slate-100 dark:bg-bg-dark shrink-0 {fileInfo.color}">
-											<FileTypeIcon class="w-3.5 h-3.5" />
-										</div>
-
-										<div class="min-w-0 flex-1">
-											<div class="flex items-center gap-1.5">
-												{#if share.has_password}
-													<Lock class="w-3 h-3 text-amber shrink-0" title="Passwortgeschützt" />
-												{:else}
-													<Globe class="w-3 h-3 text-accent shrink-0" title="Öffentlich" />
-												{/if}
-												<span class="font-medium text-text-light dark:text-text-dark truncate" title={share.filename}>
-													{share.filename}
-												</span>
-											</div>
-											<div class="mt-0.5 text-[11px] text-muted-light dark:text-muted-dark flex items-center gap-1.5">
-												{#if share.has_password}
-													<span class="text-amber">Passwortgeschützt</span>
-												{:else}
-													<span class="text-accent">Öffentlich</span>
-												{/if}
-												<span>·</span>
-												<span class="tabular-nums">{formatBytes(share.size_bytes)}</span>
-											</div>
-										</div>
-									</div>
-									<a
-										href="/shares"
-										class="p-1 rounded-md text-muted-light dark:text-muted-dark hover:text-primary hover:bg-slate-100 dark:hover:bg-bg-dark transition-colors shrink-0"
-										title="Freigabe ansehen"
-									>
-										<ExternalLink class="w-3.5 h-3.5" />
-									</a>
-								</div>
-							{/each}
-						</div>
-					{/if}
-
-					<div class="mt-4 pt-3 border-t border-border-light dark:border-border-dark">
+				{#if totalFiles > filteredFiles.slice(0, 8).length}
+					<div class="pt-1 text-right">
 						<a
-							href="/shares"
-							class="text-xs font-medium text-primary dark:text-primary-light hover:underline inline-flex items-center justify-between w-full"
+							href="/files"
+							class="text-xs font-medium text-primary dark:text-primary-light hover:underline inline-flex items-center gap-1"
 						>
-							<span>Alle Freigaben verwalten</span>
+							<span>Alle {totalFiles} Dateien anzeigen</span>
 							<ArrowRight class="w-3.5 h-3.5" />
 						</a>
 					</div>
-				</div>
-			</Card>
-
-			<!-- Karte 2: Speicherplatz (mit Akzentbalken Primary & korrekten Quota-Zahlen) -->
-			<Card class="p-5">
-				<div class="flex items-center justify-between pb-3 border-b border-border-light dark:border-border-dark">
-					<div class="flex items-center gap-2.5">
-						<div class="w-0.5 h-4 rounded-full bg-primary shrink-0"></div>
-						<div class="p-1.5 rounded-lg bg-accent/15 text-accent">
-							<HardDrive class="w-4 h-4" />
-						</div>
-						<h3 class="font-semibold text-sm text-text-light dark:text-text-dark">
-							Speicherplatz
-						</h3>
-					</div>
-					<span class="text-xs font-semibold tabular-nums text-text-light dark:text-text-dark">
-						{displayPercent}
-					</span>
-				</div>
-
-				<div class="mt-4 space-y-3">
-					<!-- Fortschrittsbalken mit primary-Farbe -->
-					<div class="w-full h-2 rounded-full bg-slate-100 dark:bg-bg-dark border border-border-light dark:border-border-dark overflow-hidden">
-						<div
-							class="h-full bg-primary transition-all duration-300 rounded-full"
-							style="width: {Math.max(quota.used_bytes > 0 ? 1 : 0, Math.min(100, quota.percent))}%"
-						></div>
-					</div>
-
-					<div class="flex items-center justify-between text-xs text-muted-light dark:text-muted-dark tabular-nums">
-						<span>{formatBytes(quota.used_bytes)} belegt</span>
-						<span>von {formatBytes(quota.total_bytes)}</span>
-					</div>
-				</div>
-			</Card>
-
-			<!-- Karte 3: Aktivitaet (mit Akzentbalken Accent & farbigen Bullet-Points nach Aktionstyp) -->
-			<Card class="p-5">
-				<div class="flex items-center justify-between pb-3 border-b border-border-light dark:border-border-dark">
-					<div class="flex items-center gap-2.5">
-						<div class="w-0.5 h-4 rounded-full bg-accent shrink-0"></div>
-						<div class="p-1.5 rounded-lg bg-primary/15 text-primary dark:text-primary-light">
-							<Activity class="w-4 h-4" />
-						</div>
-						<h3 class="font-semibold text-sm text-text-light dark:text-text-dark">
-							Aktivität
-						</h3>
-					</div>
-					<Badge variant="neutral" size="sm">
-						<span class="tabular-nums">{activityLogs.length}</span>
-					</Badge>
-				</div>
-
-				<div class="mt-4">
-					{#if isLoading}
-						<div class="space-y-2.5">
-							{#each Array(3) as _}
-								<div class="h-10 bg-slate-200/70 dark:bg-slate-800/60 animate-skeleton rounded-lg"></div>
-							{/each}
-						</div>
-					{:else if activityLogs.length === 0}
-						<!-- Empty-State mit Illustration -->
-						<div class="py-6 text-center text-xs text-muted-light dark:text-muted-dark flex flex-col items-center justify-center">
-							<img src="/assets/illustrations/empty-activity.svg" alt="Keine Aktivität" class="w-36 h-28 mb-2 select-none opacity-80" />
-							<p class="font-medium text-text-light dark:text-text-dark">Noch keine Aktivitäten</p>
-							<p class="mt-1 text-[11px]">Hier erscheinen Ihre Datei-Operationen.</p>
-						</div>
-					{:else}
-						<div class="space-y-3">
-							{#each activityLogs.slice(0, 3) as log (log.id)}
-								<div class="flex items-start gap-2.5 text-xs">
-									<!-- Farbcodierter Bullet-Punkt: upload=teal, share=amber, login=slate, delete=rose -->
-									<div class="mt-1 w-2 h-2 rounded-full shrink-0 {getAuditDotColor(log.action)}"></div>
-									<div class="min-w-0 flex-1">
-										<p class="font-medium text-text-light dark:text-text-dark truncate">
-											{formatAuditAction(log.action)}
-										</p>
-										<p class="text-[11px] text-muted-light dark:text-muted-dark tabular-nums mt-0.5">
-											{formatRelativeTime(log.created_at)}
-										</p>
-									</div>
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-			</Card>
-
-			<!-- Karte 4: Fotokarte Vorschau (nur wenn GPS-Fotos vorhanden) -->
-			<MapPreview />
-
-			<!-- Sicherheitsstatus (DSGVO & BSI) -->
-			<div class="p-4 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark card-depth shadow-depth space-y-2.5">
-				<div class="flex items-center gap-2 font-semibold text-xs text-text-light dark:text-text-dark">
-					<ShieldCheck class="w-4 h-4 text-accent" />
-					<span>BSI TR-02102-2 & DSGVO konform</span>
-				</div>
-				<div class="space-y-1.5 text-[11px] text-muted-light dark:text-muted-dark">
-					<div class="flex items-center gap-1.5">
-						<CheckCircle2 class="w-3.5 h-3.5 text-accent shrink-0" />
-						<span>AES-256-GCM at rest</span>
-					</div>
-					<div class="flex items-center gap-1.5">
-						<CheckCircle2 class="w-3.5 h-3.5 text-accent shrink-0" />
-						<span>TLS 1.3 in transit</span>
-					</div>
-					<div class="flex items-center gap-1.5">
-						<CheckCircle2 class="w-3.5 h-3.5 text-accent shrink-0" />
-						<span>RLS isoliert & Audit-Log aktiv</span>
-					</div>
-				</div>
-			</div>
+				{/if}
+			{/if}
 		</div>
+
+		{/if}
+
+		{#if sections.activity}
+		<!-- Aktivitaetsliste: nutzt die volle Spaltenhoehe neben den Kacheln -->
+		<Card class="p-5">
+			<div class="flex items-center justify-between pb-3 border-b border-border-light dark:border-border-dark">
+				<div class="flex items-center gap-2.5">
+					<div class="w-0.5 h-4 rounded-full bg-accent shrink-0"></div>
+					<h3 class="font-semibold text-sm text-text-light dark:text-text-dark">
+						Letzte Aktivität
+					</h3>
+				</div>
+				<Badge variant="neutral" size="sm">
+					<span class="tabular-nums">{activityLogs.length}</span>
+				</Badge>
+			</div>
+
+			<div class="mt-4">
+				{#if isLoading}
+					<div class="space-y-2.5">
+						{#each Array(6) as _}
+							<div class="h-10 bg-slate-200/70 dark:bg-slate-800/60 animate-skeleton rounded-lg"></div>
+						{/each}
+					</div>
+				{:else if activityLogs.length === 0}
+					<div class="py-6 text-center text-xs text-muted-light dark:text-muted-dark flex flex-col items-center justify-center">
+						<img src="/assets/illustrations/empty-activity.svg" alt="Keine Aktivität" class="w-36 h-28 mb-2 select-none opacity-80" />
+						<p class="font-medium text-text-light dark:text-text-dark">Noch keine Aktivitäten</p>
+						<p class="mt-1 text-2xs">Hier erscheinen Ihre Datei-Operationen.</p>
+					</div>
+				{:else}
+					<div class="space-y-3">
+						{#each activityLogs.slice(0, 7) as log (log.id)}
+							<div class="flex items-start gap-2.5 text-xs">
+								<div class="mt-1 w-2 h-2 rounded-full shrink-0 {getAuditDotColor(log.action)}"></div>
+								<div class="min-w-0 flex-1">
+									<p class="font-medium text-text-light dark:text-text-dark truncate">
+										{formatAuditAction(log.action)}
+									</p>
+									<p class="text-2xs text-muted-light dark:text-muted-dark tabular-nums mt-0.5">
+										{formatRelativeTime(log.created_at)}
+									</p>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</Card>
+		{/if}
 	</div>
+	{/if}
+
+	<!-- 4. Freigabenliste nur, wenn es Freigaben gibt. Der leere Zustand steckt in
+	     der Kennzahl oben und braucht keine eigene hohe Karte mehr. -->
+	{#if sections.shares && !isLoading && shares.length > 0}
+		<Card class="p-5">
+			<div class="flex items-center justify-between pb-3 border-b border-border-light dark:border-border-dark">
+				<div class="flex items-center gap-2.5">
+					<div class="w-0.5 h-4 rounded-full bg-amber shrink-0"></div>
+					<h3 class="font-semibold text-sm text-text-light dark:text-text-dark">Ihre Freigaben</h3>
+				</div>
+				<a
+					href="/shares"
+					class="text-xs font-medium text-primary dark:text-primary-light hover:underline inline-flex items-center gap-1"
+				>
+					<span>Alle verwalten</span>
+					<ArrowRight class="w-3.5 h-3.5" />
+				</a>
+			</div>
+
+			<div class="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-3">
+				{#each shares.slice(0, 6) as share}
+					{@const fileInfo = getShareFileInfo(share.filename)}
+					{@const FileTypeIcon = fileInfo.icon}
+					<div class="flex items-center justify-between gap-3 text-xs">
+						<div class="min-w-0 flex-1 flex items-center gap-2.5">
+							<div class="p-1 rounded-md bg-slate-100 dark:bg-bg-dark shrink-0 {fileInfo.color}">
+								<FileTypeIcon class="w-3.5 h-3.5" />
+							</div>
+							<div class="min-w-0 flex-1">
+								<div class="flex items-center gap-1.5">
+									{#if share.has_password}
+										<Lock class="w-3 h-3 text-amber shrink-0" title="Passwortgeschützt" />
+									{:else}
+										<Globe class="w-3 h-3 text-accent shrink-0" title="Öffentlich" />
+									{/if}
+									<span class="font-medium text-text-light dark:text-text-dark truncate" title={share.filename}>
+										{share.filename}
+									</span>
+								</div>
+								<div class="mt-0.5 text-2xs text-muted-light dark:text-muted-dark flex items-center gap-1.5">
+									{#if share.has_password}
+										<span class="text-amber">Passwortgeschützt</span>
+									{:else}
+										<span class="text-accent">Öffentlich</span>
+									{/if}
+									<span>·</span>
+									<span class="tabular-nums">{formatBytes(share.size_bytes)}</span>
+								</div>
+							</div>
+						</div>
+						<a
+							href="/shares"
+							class="p-1 rounded-md text-muted-light dark:text-muted-dark hover:text-primary hover:bg-slate-100 dark:hover:bg-bg-dark transition-colors shrink-0"
+							title="Freigabe ansehen"
+						>
+							<ExternalLink class="w-3.5 h-3.5" />
+						</a>
+					</div>
+				{/each}
+			</div>
+		</Card>
+	{/if}
+
+	<!-- 5. Fotokarte (rendert nur bei vorhandenen GPS-Fotos) -->
+	{#if sections.map}
+		<MapPreview />
+	{/if}
 </div>
 
 <!-- Dialoge -->

@@ -11,7 +11,8 @@
 		IconAlbum,
 		IconMap,
 		IconMapPin,
-		IconCurrentLocation
+		IconCurrentLocation,
+		IconChevronDown
 	} from '@tabler/icons-svelte';
 
 	let photos = $state<PhotoItem[]>([]);
@@ -203,7 +204,9 @@
 			</p>
 		</div>
 
-		<div class="flex items-center gap-2.5">
+		<!-- flex-wrap: die Buttons duerfen auf schmalen Viewports umbrechen, statt
+		     aus der Seite zu laufen (die Labels selbst brechen nicht um) -->
+		<div class="flex flex-wrap items-center gap-2.5">
 			<Button href="/photos/map" variant="secondary" size="sm">
 				<IconMap size={16} stroke={1.75} class="mr-1.5 text-accent" />
 				<span>Karte</span>
@@ -215,8 +218,8 @@
 			</Button>
 
 			<Button href="/files/upload" variant="primary" size="sm">
-				<IconUpload size={16} stroke={1.75} class="mr-1.5" />
-				<span>Fotos hochladen</span>
+				<IconUpload size={16} stroke={1.75} class="mr-1.5 shrink-0" />
+				<span class="whitespace-nowrap">Fotos hochladen</span>
 			</Button>
 		</div>
 	</div>
@@ -262,16 +265,24 @@
 				</button>
 			</div>
 
-			<!-- Jahr-Dropdown -->
-			<select
-				bind:value={selectedYear}
-				class="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 py-1.5 text-xs text-text-light dark:text-text-dark focus:outline-hidden focus:border-primary cursor-pointer shadow-xs"
-			>
-				<option value="all">Alle Jahre</option>
-				{#each availableYears as year}
-					<option value={year}>{year}</option>
-				{/each}
-			</select>
+			<!-- Jahr-Dropdown: appearance-none + eigener Chevron, damit es nicht als
+			     natives System-Control neben den gestylten Pill-Buttons steht -->
+			<div class="relative">
+				<select
+					bind:value={selectedYear}
+					class="appearance-none rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark pl-3 pr-8 py-1.5 text-xs text-text-light dark:text-text-dark focus:outline-hidden focus:border-primary cursor-pointer shadow-xs"
+				>
+					<option value="all">Alle Jahre</option>
+					{#each availableYears as year}
+						<option value={year}>{year}</option>
+					{/each}
+				</select>
+				<IconChevronDown
+					size={14}
+					stroke={1.75}
+					class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark"
+				/>
+			</div>
 
 			<!-- Toggle: Mit Ort -->
 			<button
