@@ -91,6 +91,7 @@ Stimmen die IDs nicht überein, läuft noch das alte Image.
 ### Frontend
 
 ```bash
+# aus dem Wurzelverzeichnis
 cd frontend
 npm ci
 npm run check       # svelte-check (Typen)
@@ -109,6 +110,7 @@ Bilder gewollt sind.
 ### Go
 
 ```bash
+# aus dem Wurzelverzeichnis
 cd services/app-server
 go build ./... && go vet ./...
 go test ./...
@@ -117,18 +119,36 @@ go test ./...
 Datenbankabhängige Tests überspringen sich selbst, wenn kein PostgreSQL erreichbar ist
 (`SKIP`, nicht `FAIL`). Um sie laufen zu lassen, auf eine Instanz zeigen:
 
+> **Niemals gegen die Entwicklungsdatenbank.** Die Routentests fuehren
+> `DELETE FROM users` und Loeschungen von Einladungen aus. Zeigen sie auf die
+> laufende Dev-Datenbank (`4labscloud`), zerstoeren sie deren Daten - einschliesslich
+> des in `AGENTS.md` als unantastbar markierten Administrators.
+
+Stattdessen einen Wegwerf-Container auf einem eigenen Port starten:
+
 ```bash
-POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=5432 \
-POSTGRES_USER=4labs POSTGRES_PASSWORD=... POSTGRES_DB=4labscloud \
+# aus dem Wurzelverzeichnis
+podman run -d --name 4lab-test-pg \
+  -e POSTGRES_USER=4labs -e POSTGRES_PASSWORD=testpass -e POSTGRES_DB=4labscloud_test \
+  -p 55433:5432 \
+  -v "$PWD/deploy/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro" \
+  docker.io/library/postgres:17-alpine
+
+cd services/app-server
+POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=55433 \
+POSTGRES_USER=4labs POSTGRES_PASSWORD=testpass POSTGRES_DB=4labscloud_test \
 go test ./internal/routes/
 ```
 
-Laut `AGENTS.md` laufen Tests **niemals** gegen die Live-Entwicklungsdatenbank. Für
-DB-Tests eine separate Datenbank oder einen Wegwerf-Container verwenden.
+Nach dem Lauf aufraeumen: `podman rm -f 4lab-test-pg`.
+
+Derselbe Container laesst sich fuer die Rust-Integrationstests verwenden, indem
+`DATABASE_URL` auf Port 55433 zeigt.
 
 ### Rust
 
 ```bash
+# aus dem Wurzelverzeichnis
 cd services/upload-service
 cargo check --all-targets
 cargo test --lib                              # ohne Datenbank

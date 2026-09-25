@@ -77,9 +77,39 @@ Anschließend `DOMAIN` auf die eigene Domain setzen.
 Eine vollständige Beschreibung aller Variablen steht in der
 [README](https://github.com/Der-Felix/4Lab_Cloud/blob/main/README.md#umgebungsvariablen).
 
+> **Jetzt ueber Geocoding entscheiden.** `.env.prod.example` setzt
+> `GEOCODING_ENABLED=true`, der Nominatim-Dienst startet aber nur mit einem
+> zusaetzlichen Compose-Profil. Legen Sie die Variante gemaess
+> [Abschnitt 8](#8-reverse-geocoding-aktivieren-oder-bewusst-abschalten) **vor dem
+> ersten Start** fest. Eine spaetere Aenderung der `.env` wirkt erst nach einem
+> Neustart des Upload-Service.
+
 ---
 
-## 5. Starten
+## 5. Zugang fuer den Erststart einschraenken
+
+> **Kritisch:** Der erste registrierte Benutzer erhaelt Administratorrechte.
+> Nginx veroeffentlicht die Ports **80 und 443**, sobald der Stack laeuft. Zwischen
+> dem Start und Ihrer eigenen Registrierung kann jeder, der die Adresse kennt, den
+> Administrator-Account anlegen. Schliessen Sie dieses Zeitfenster, bevor Sie starten.
+
+Beschraenken Sie den Zugriff auf Ihre eigene IP-Adresse, zum Beispiel mit `ufw`:
+
+```bash
+sudo ufw allow from <IHRE-IP> to any port 80 proto tcp
+sudo ufw allow from <IHRE-IP> to any port 443 proto tcp
+sudo ufw deny 80/tcp
+sudo ufw deny 443/tcp
+sudo ufw enable
+```
+
+Alternativ mit `nftables`/`iptables` oder, falls vorhanden, in der Firewall Ihres
+Hosters. Entscheidend ist nur, dass **vor** dem ersten Start niemand sonst die
+Anwendung erreicht.
+
+---
+
+## 6. Starten
 
 ```bash
 cd ~/4Lab_Cloud/deploy/podman/prod        # Pfad ggf. anpassen
@@ -97,7 +127,7 @@ Alle Container sollten `healthy` melden. Die Anwendung ist nun unter
 
 ---
 
-## 6. Erster Start und Administrator
+## 7. Administrator anlegen und freigeben
 
 Der **erste registrierte Benutzer wird automatisch Administrator**. Danach ist die freie
 Selbstregistrierung geschlossen; weitere Benutzer werden per Einladung angelegt.
@@ -113,9 +143,21 @@ Empfohlene erste Schritte:
    werden sollen. Standard ist aktiviert; bei Deaktivierung werden Koordinaten vor dem
    Speichern entfernt und lassen sich später nicht rekonstruieren.
 
+**Erst danach** den Zugang oeffnen:
+
+```bash
+sudo ufw delete deny 80/tcp
+sudo ufw delete deny 443/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
+
+Ab diesem Zeitpunkt ist die Selbstregistrierung geschlossen; weitere Benutzer
+entstehen ausschliesslich ueber Einladungen.
+
 ---
 
-## 7. Reverse-Geocoding: aktivieren oder bewusst abschalten
+## 8. Reverse-Geocoding: aktivieren oder bewusst abschalten
 
 > **Wichtig:** `.env.prod.example` setzt `GEOCODING_ENABLED=true`, der
 > Nominatim-Container startet aber **nur** mit dem Compose-Profil `geocoding`.
@@ -165,7 +207,7 @@ der Dienst erneut.
 
 ---
 
-## 8. Backups einrichten
+## 9. Backups einrichten
 
 Ein Backup ist erst dann eines, wenn die Wiederherstellung getestet wurde.
 
@@ -189,7 +231,7 @@ Wiederherstellung über `scripts/restore.sh` stehen in
 
 ---
 
-## 9. Aktualisieren
+## 10. Aktualisieren
 
 ```bash
 cd ~/4Lab_Cloud          # Pfad ggf. anpassen
@@ -198,6 +240,10 @@ cd deploy/podman/prod
 podman-compose --env-file ../../../.env -f docker-compose.prod.yml build
 podman-compose --env-file ../../../.env -f docker-compose.prod.yml up -d --force-recreate
 ```
+
+> Bei **Variante B** (Geocoding aktiv) muss `--profile geocoding` bei *jedem*
+> Aufruf mit angegeben werden - auch hier beim Update. Fehlt es, laeuft die
+> Instanz anschliessend mit aktiviertem Geocoding ohne Nominatim-Dienst.
 
 **Vor dem Update ein Backup anlegen.**
 
@@ -225,7 +271,7 @@ Der Änderungsverlauf steht im
 
 ---
 
-## 10. Fehlerbehebung
+## 11. Fehlerbehebung
 
 | Symptom | Ursache und Lösung |
 |---|---|
@@ -241,7 +287,7 @@ Eine ausführlichere Tabelle steht in der
 
 ---
 
-## 11. Deinstallation
+## 12. Deinstallation
 
 ```bash
 cd ~/4Lab_Cloud/deploy/podman/prod        # Pfad ggf. anpassen
