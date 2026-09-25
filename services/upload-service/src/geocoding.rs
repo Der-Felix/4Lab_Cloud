@@ -112,7 +112,10 @@ impl GeocodingClient {
         let resp = match self
             .http_client
             .get(&url)
-            .header("User-Agent", "4LabCloud/0.2.1 (Self-Hosted)")
+            .header(
+                "User-Agent",
+                concat!("4LabCloud/", env!("CARGO_PKG_VERSION"), " (Self-Hosted)"),
+            )
             .send()
             .await
         {
