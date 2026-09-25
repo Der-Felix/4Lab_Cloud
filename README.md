@@ -33,6 +33,10 @@ cp .env.example .env
 podman machine start
 cd deploy/podman && podman-compose --env-file ../../.env up -d
 # Frontend aufrufen: https://localhost:8443 (Zertifikatswarnung akzeptieren)
+#
+# Hinweis: Der Nominatim-Container startet bewusst NICHT mit. Er liegt hinter dem
+# Compose-Profil "geocoding", weil er beim ersten Start einen OSM-Datenauszug
+# importiert. Ohne ihn funktioniert alles ausser der Ortsnamen-Aufloesung.
 ```
 
 ---
@@ -144,6 +148,9 @@ podman logs -f 4labs-prod-nginx
 | `DEFAULT_QUOTA_GB` | `50` | Standard-Speicherplatzkontingent pro Benutzer in GB |
 | `APP_PORT` | `8080` | Interner Port des Go-App-Servers |
 | `UPLOAD_PORT` | `8081` | Interner Port des Rust-Storage-Services |
+| `GEOCODING_ENABLED` | `false` | Reverse-Geocoding via Nominatim aktivieren. Standardmäßig aus – ohne laufenden Nominatim-Dienst bleibt `location_name` leer. |
+| `NOMINATIM_URL` | `http://nominatim:8080` | Adresse der self-hosted Nominatim-Instanz (nur bei aktiviertem Geocoding) |
+| `NOMINATIM_PBF_URL` | *(Monaco)* | OSM-Datenauszug, den der Nominatim-Container importiert. Nur in `.env.prod.example`. **Achtung:** Der Import läuft je nach Region Stunden bis Tage. |
 
 ---
 
@@ -166,11 +173,27 @@ podman logs -f 4labs-prod-nginx
 
 ---
 
+## Fehlerbehebung
+
+| Symptom | Ursache | Lösung |
+|---|---|---|
+| Browser warnt „Nicht sicher" | Im Entwicklungsmodus liegt ein selbstsigniertes Zertifikat unter `deploy/podman/certs/`. | Warnung einmalig bestätigen. Für Produktion Zertifikate via Certbot beziehen (siehe oben). |
+| Code-Änderung wirkt nicht | `podman-compose up -d` verwendet vorhandene Images weiter und baut **nicht** neu. | `podman-compose --env-file ../../.env build <dienst>` – und danach `down` + `up -d`. Ein `--build` allein baut zwar das Image, ersetzt aber den **laufenden Container nicht**. Prüfen mit: `podman inspect 4labs-frontend --format '{{.Image}}'` gegen `podman images`. |
+| Login antwortet mit `429` | Rate-Limiter: 5 Versuche pro Minute und IP, 10 pro Stunde und E-Mail-Adresse. | Warten, oder im Entwicklungsmodus die Zähler leeren: `podman exec -i 4labs-redis redis-cli -a "$REDIS_PASSWORD" --no-auth-warning KEYS "rl:login:*"` und die Schlüssel löschen. |
+| Neue Spalten fehlen nach einem Update | Migrationen werden **nicht** automatisch beim Start angewendet. `init.sql` läuft nur bei einer leeren Datenbank. | Zuerst die Konfiguration in die Shell laden (`--env-file` von podman-compose tut das nicht): `set -a && . ./.env && set +a`, dann `podman exec -i 4labs-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < deploy/postgres/migrations/<datei>.sql` (produktiv: `4labs-prod-postgres`) |
+| Fotos haben keinen Ortsnamen | `GEOCODING_ENABLED=false` (Standard) oder Nominatim läuft nicht. | Variable setzen und den Dienst mit dem Profil starten: `podman-compose --profile geocoding up -d`. Rechnen Sie mit langer Importdauer. |
+| Karte bleibt leer | Es existieren keine Fotos mit GPS-Koordinaten, oder der Nutzer hat die GPS-Speicherung deaktiviert. | GPS-Einstellung unter *Einstellungen → Datenschutz* prüfen. Bereits ohne GPS gespeicherte Fotos lassen sich nicht nachträglich verorten. |
+
+---
+
 ## Weiterführende Dokumentation
 
 Die vollständige Online-Dokumentation ist über **[GitHub Pages](https://der-felix.github.io/4Lab_Cloud/)** verfügbar:
 
 - [docs/index.md](docs/index.md) – Zentrale Doku-Übersicht & Benutzeroberfläche
+- [docs/INSTALL.md](docs/INSTALL.md) – Installationsanleitung für den Eigenbetrieb (TLS, Geheimnisse, Updates)
+- [docs/DESIGN.md](docs/DESIGN.md) – Verbindliches Design-System: Farbtoken, Kontraste, Typo-Skala, Layoutregeln
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) – Entwicklungshandbuch: Aufbau, Tests, Container-Rebuild, Konventionen
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) – Detaillierte Architektur, Datenflüsse und Komponenten
 - [docs/COMPLIANCE.md](docs/COMPLIANCE.md) – DSGVO-Artikel-Mapping, BSI-Konformität und Audit-Konzept
 - [docs/BACKUP.md](docs/BACKUP.md) – 3-2-1 Backup-Strategie und Disaster Recovery Handbuch

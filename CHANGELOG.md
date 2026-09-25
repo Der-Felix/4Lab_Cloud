@@ -5,6 +5,21 @@ Alle nennenswerten Änderungen an diesem Projekt werden in dieser Datei dokument
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unveröffentlicht]
+
+### Behoben
+- **Versionsnummern vereinheitlicht**: `frontend/package.json` (0.0.1) und `services/upload-service/Cargo.toml` (0.1.0) lagen hinter dem tatsächlichen Stand zurück; beide stehen jetzt auf 0.2.4. Der Nominatim-`User-Agent` war fest auf „4LabCloud/0.2.1" verdrahtet und wird nun aus `CARGO_PKG_VERSION` abgeleitet, damit er nicht erneut driftet.
+- **Kontrast im Light Mode**: `accent` (1.86:1) und `amber` (2.15:1) verfehlten auf weißem Grund die WCAG-AA-Schwelle deutlich, `muted-light` (4.40:1) und `primary` (4.41:1) knapp. Die Token werden jetzt unter `html:not(.dark)` pro Modus umdefiniert; alle vier liegen über 4.5:1.
+- **Dokumentationslinks**: Die Kapitel-Links der GitHub-Pages-Startseite zeigten auf `.md`-Dateien, die GitHub Pages als rohen Quelltext ausliefert, statt auf die gerenderten `.html`-Seiten.
+- **Layout auf schmalen Viewports**: Die Sidebar kannte keinen Breakpoint und belegte auf Mobilgeräten 240px von 390px; der Kopfbereich lief dadurch auf rund 750px Breite auf und war nicht erreichbar, da die Hauptspalte `overflow-x-hidden` setzt.
+- **Dashboard-Dichte**: Der Hero-Bereich hatte eine feste Höhe von 280px und belegte auf einem 14-Zoll-Notebook 35% der sichtbaren Höhe; die Höhe ist nun an den Viewport gebunden.
+
+### Geändert
+- **Dashboard neu aufgebaut**: Kennzahlen als kompakte Kacheln statt großflächiger, bei leerem Datenbestand überwiegend leerer Karten. Leere Zustände rendern keine eigene Karte mehr. Über „Anpassen" lassen sich sechs Bereiche einzeln ein- und ausblenden (gespeichert im `localStorage`).
+- **Typografie vereinheitlicht**: 63 handgesetzte Schriftgrößen (`text-[11px]`, `text-[10px]`, `text-[9px]`) durch die benannten Stufen `text-2xs` und `text-3xs` ersetzt; Größen unter 10px entfallen.
+- **Compliance-Badges entfernt**: Die Hinweise „BSI TR-02102-2 & DSGVO konform" auf dem Dashboard und „AES-256-GCM · TLS 1.3 · Keine Tracker" auf der Anmeldeseite belegten dauerhaft Platz, ohne dem angemeldeten Nutzer eine Handlungsmöglichkeit zu geben. Die Inhalte stehen weiterhin in `docs/COMPLIANCE.md`.
+- **Dokumentation erweitert**: `GEOCODING_ENABLED`, `NOMINATIM_URL` und `NOMINATIM_PBF_URL` in der README ergänzt (seit 0.2.1 undokumentiert), Abschnitt „Fehlerbehebung" hinzugefügt, Tech-Stack-Angaben korrigiert (kein GORM im Einsatz, Rust-Version war frei erfunden).
+
 ## [0.2.4] - 2026-09-25
 
 ### Behoben
