@@ -2,6 +2,28 @@
 
 4LabCloud ist eine schlanke, souveräne Open-Source-Cloud-Plattform für verschlüsselten Dateiupload, Freigaben und Medienverwaltung. Die Plattform wurde ohne SaaS-Abhängigkeiten oder externe Tracking-Dienste speziell für maximale Performance, intuitive Bedienung und strikte europäische Datenschutzstandards konzipiert.
 
+[![Dokumentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://der-felix.github.io/4Lab_Cloud/)
+[![Lizenz](https://img.shields.io/badge/Lizenz-Apache%202.0-green.svg)](LICENSE)
+
+![4LabCloud Dashboard](docs/screenshots/dashboard-dark.png)
+
+---
+
+## Highlights & Benutzeroberfläche
+
+- **Performantes Dashboard & Dateimanager**: Moderne Oberfläche mit SvelteKit, Dark-/Light-Modus und schnellem Chunk-Upload via Uppy und Tus.
+- **Medienverwaltung mit Timeline & EXIF-Sidebar**: Automatische Extraktion technischer Kameradaten (Modell, Objektiv, Blende, Belichtung, ISO, Brennweite) und Gruppierung nach Monaten und Tagen.
+- **Integrierte Fotokarte**: Lokales Reverse-Geocoding via Nominatim und Visualisierung aller GPS-Fotos mit interaktiven Leaflet-/OpenStreetMap-Karten.
+- **DSGVO & Compliance Out-of-the-Box**: Selbstlöschung nach Art. 17 DSGVO, verschlüsselter ZIP-Export nach Art. 20 DSGVO, Audit-Logs mit HMAC-Pseudonymisierung und striktes TLS 1.3 nach BSI TR-02102-2.
+
+| Chronologische Foto-Timeline | EXIF-Metadaten & Kartenlink |
+|---|---|
+| ![Foto-Timeline](docs/screenshots/timeline-month.png) | ![EXIF-Sidebar](docs/screenshots/lightbox-exif.png) |
+
+| Dashboard Minikarten-Vorschau | DSGVO-Self-Service & Export |
+|---|---|
+| ![Fotokarte-Widget](docs/screenshots/dashboard-map-preview.png) | ![DSGVO Self-Service](docs/screenshots/settings-dsgvo.png) |
+
 ---
 
 ## Quick Start (Entwicklung)
@@ -146,6 +168,9 @@ podman logs -f 4labs-prod-nginx
 
 ## Weiterführende Dokumentation
 
+Die vollständige Online-Dokumentation ist über **[GitHub Pages](https://der-felix.github.io/4Lab_Cloud/)** verfügbar:
+
+- [docs/index.md](docs/index.md) – Zentrale Doku-Übersicht & Benutzeroberfläche
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) – Detaillierte Architektur, Datenflüsse und Komponenten
 - [docs/COMPLIANCE.md](docs/COMPLIANCE.md) – DSGVO-Artikel-Mapping, BSI-Konformität und Audit-Konzept
 - [docs/BACKUP.md](docs/BACKUP.md) – 3-2-1 Backup-Strategie und Disaster Recovery Handbuch
