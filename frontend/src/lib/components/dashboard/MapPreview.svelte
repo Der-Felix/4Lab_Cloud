@@ -117,7 +117,7 @@
 				<div use:initMiniMap class="w-full h-full pointer-events-none"></div>
 				<div class="absolute inset-0 bg-transparent group-hover:bg-black/10 transition-colors"></div>
 			</a>
-			<span class="block text-[10px] text-muted-light dark:text-muted-dark mt-1 text-right">
+			<span class="block text-3xs text-muted-light dark:text-muted-dark mt-1 text-right">
 				&copy; OpenStreetMap contributors
 			</span>
 		</div>

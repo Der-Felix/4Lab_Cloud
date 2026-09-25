@@ -36,6 +36,27 @@
 	--color-rose: #F43F5E;
 	--color-violet: #8B5CF6;
 	--color-slate: #64748B;
+
+	/* Typo-Skala unterhalb von text-xs (12px). Vorher standen hier 63-mal
+	   handgesetzte Werte wie text-[11px] - eine zweite, undokumentierte Skala. */
+	--text-2xs: 0.6875rem;          /* 11px - Metadaten, Zeitstempel */
+	--text-2xs--line-height: 1rem;
+	--text-3xs: 0.625rem;           /* 10px - Badges, absolute Untergrenze */
+	--text-3xs--line-height: 0.875rem;
+}
+
+/* Light-Mode-Korrekturen der Farbtoken.
+   accent und amber sind fuer dunkle Flaechen entworfen. Auf Weiss erreichen sie
+   1.86:1 bzw. 2.15:1 und verfehlen damit sogar die Schwelle fuer Grosstext (3:1).
+   Da 73 der 77 Fundstellen keine dark:-Variante haben, werden die Token hier
+   pro Modus umdefiniert statt an jeder Fundstelle - eine Stelle statt 73. */
+html:not(.dark) {
+	--color-accent: #0F766E;        /* teal-700  - 5.47:1 auf Weiss (war 1.86:1) */
+	--color-amber: #B45309;         /* amber-700 - 5.02:1 auf Weiss (war 2.15:1) */
+	--color-warning: #B45309;
+	--color-primary: #1A5FBF;       /* 6.12:1 statt 4.85:1; Links auf bg-light lagen bei 4.41:1 */
+	--color-primary-hover: #164FA0;
+	--color-muted-light: #5B5B63;   /* 6.0:1 auf bg-light; vorher 4.40:1 und damit unter AA */
 }
 
 :root {

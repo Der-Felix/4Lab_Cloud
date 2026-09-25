@@ -158,7 +158,7 @@
 										<Share2 class="w-5 h-5" />
 									</div>
 									<p class="text-xs font-medium text-text-light dark:text-text-dark">Keine aktiven Freigaben gefunden</p>
-									<p class="text-[11px] text-muted-light dark:text-muted-dark">
+									<p class="text-2xs text-muted-light dark:text-muted-dark">
 										Klicken Sie in der Dateiansicht auf das Teilen-Symbol einer Datei, um einen Freigabelink zu erstellen.
 									</p>
 								</div>
@@ -178,7 +178,7 @@
 											<p class="font-medium text-text-light dark:text-text-dark truncate max-w-[200px] sm:max-w-xs" title={share.filename}>
 												{share.filename}
 											</p>
-											<p class="text-[11px] text-muted-light dark:text-muted-dark tabular-nums">
+											<p class="text-2xs text-muted-light dark:text-muted-dark tabular-nums">
 												{formatBytes(share.size_bytes)}
 											</p>
 										</div>

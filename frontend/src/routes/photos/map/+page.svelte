@@ -65,8 +65,8 @@
 							onerror="this.style.display='none'"
 						/>
 						<div class="font-semibold text-xs truncate">${item.filename}</div>
-						${item.location_name ? `<div class="text-[11px] text-neutral-600 mt-0.5 truncate">${item.location_name}</div>` : ''}
-						${item.taken_at ? `<div class="text-[10px] text-neutral-400 mt-1">${formatDate(item.taken_at)}</div>` : ''}
+						${item.location_name ? `<div class="text-2xs text-neutral-600 mt-0.5 truncate">${item.location_name}</div>` : ''}
+						${item.taken_at ? `<div class="text-3xs text-neutral-400 mt-1">${formatDate(item.taken_at)}</div>` : ''}
 					</div>
 				`;
 
@@ -140,7 +140,7 @@
 	<!-- Karten-Container -->
 	<div class="relative w-full h-[calc(100vh-210px)] min-h-[500px] rounded-2xl overflow-hidden border border-border-light dark:border-border-dark shadow-depth card-depth bg-surface-light dark:bg-surface-dark">
 		<!-- DSGVO / OSM Hinweis-Banner -->
-		<div class="absolute top-3 right-3 z-400 px-3 py-1.5 rounded-xl bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-md border border-border-light dark:border-border-dark text-[11px] text-muted-light dark:text-muted-dark flex items-center gap-1.5 shadow-md">
+		<div class="absolute top-3 right-3 z-400 px-3 py-1.5 rounded-xl bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-md border border-border-light dark:border-border-dark text-2xs text-muted-light dark:text-muted-dark flex items-center gap-1.5 shadow-md">
 			<IconInfoCircle size={14} class="text-accent shrink-0" />
 			<span>Kartenkacheln von OpenStreetMap</span>
 		</div>

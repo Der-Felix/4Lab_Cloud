@@ -70,7 +70,10 @@ test.describe('Foto-Galerie & Alben (Etappe F3)', () => {
 
 		// Pruefen, dass Seite geladen ist
 		await expect(page.locator('h1')).toContainText('Fotos & Medien');
-		await expect(page.locator('text=sommerurlaub.jpg')).toBeVisible();
+		// PhotoTile rendert den Dateinamen zweimal (Kachel-Beschriftung + Hover-Overlay),
+		// ein blosses text=-Locator trifft daher beide und verletzt den Strict Mode.
+		// Auf die Kachel selbst prüfen, die eindeutig ist.
+		await expect(page.locator('button[title="sommerurlaub.jpg"]')).toBeVisible();
 
 		// Klick auf Foto oeffnet Lightbox
 		await page.locator('button[title="sommerurlaub.jpg"]').click();

@@ -103,7 +103,7 @@
 					<h4 class="font-semibold text-text-light dark:text-text-dark">
 						Passwortgeschütztes ZIP-Archiv
 					</h4>
-					<p class="text-muted-light dark:text-muted-dark text-[11px] leading-relaxed">
+					<p class="text-muted-light dark:text-muted-dark text-2xs leading-relaxed">
 						Enthält alle Ihre Originaldateien, Metadaten im JSON-Format sowie eine ausführliche Entschlüsselungsanleitung
 						(<code class="font-mono text-primary font-semibold">HOW_TO_DECRYPT.txt</code>).
 					</p>
@@ -111,7 +111,7 @@
 			</div>
 
 			<div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border-light dark:border-border-dark">
-				<div class="flex items-center gap-1.5 text-[11px] text-muted-light dark:text-muted-dark">
+				<div class="flex items-center gap-1.5 text-2xs text-muted-light dark:text-muted-dark">
 					<Clock class="w-3.5 h-3.5 text-primary" />
 					<span>Bereitgestellte Exporte laufen nach <strong>7 Tagen</strong> automatisch ab.</span>
 				</div>
@@ -119,7 +119,7 @@
 				<button
 					type="button"
 					onclick={() => (showHelpDialog = true)}
-					class="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
+					class="text-2xs text-primary hover:underline flex items-center gap-1 cursor-pointer"
 				>
 					<HelpCircle class="w-3.5 h-3.5" />
 					<span>Wie öffne ich die Datei?</span>
@@ -168,7 +168,7 @@
 					<CheckCircle2 class="w-4 h-4 text-accent shrink-0" />
 					<div>
 						<p class="font-medium text-text-light dark:text-text-dark">Ihr Datenexport ist abholbereit</p>
-						<p class="text-[11px] text-muted-light dark:text-muted-dark">
+						<p class="text-2xs text-muted-light dark:text-muted-dark">
 							Verschlüsselt mit dem von Ihnen gewählten Passwort.
 						</p>
 					</div>
@@ -210,7 +210,7 @@
 			placeholder="Sicheres Archiv-Passwort"
 		/>
 
-		<div class="p-3 rounded-lg bg-slate-100 dark:bg-bg-dark border border-border-light dark:border-border-dark flex items-start gap-2 text-[11px] text-muted-light dark:text-muted-dark">
+		<div class="p-3 rounded-lg bg-slate-100 dark:bg-bg-dark border border-border-light dark:border-border-dark flex items-start gap-2 text-2xs text-muted-light dark:text-muted-dark">
 			<Lock class="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
 			<span>
 				Merken Sie sich dieses Passwort gut. Ohne dieses Kennwort können die exportierten Dateien nicht wiederhergestellt werden.
@@ -268,7 +268,7 @@
 
 		<div class="space-y-1.5">
 			<h5 class="font-semibold text-text-light dark:text-text-dark">Im Terminal (Linux / macOS):</h5>
-			<pre class="p-2.5 rounded-lg bg-slate-100 dark:bg-bg-dark border border-border-light dark:border-border-dark font-mono text-[11px] text-text-light dark:text-text-dark select-all">7z x export.zip -pDEIN_PASSWORT</pre>
+			<pre class="p-2.5 rounded-lg bg-slate-100 dark:bg-bg-dark border border-border-light dark:border-border-dark font-mono text-2xs text-text-light dark:text-text-dark select-all">7z x export.zip -pDEIN_PASSWORT</pre>
 		</div>
 	</div>
 

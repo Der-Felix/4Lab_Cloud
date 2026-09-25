@@ -43,7 +43,7 @@
 </script>
 
 <span
-	class="inline-flex items-center font-medium border rounded-full {size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs'} {variantClasses} {customClass}"
+	class="inline-flex items-center font-medium border rounded-full {size === 'sm' ? 'px-2 py-0.5 text-2xs' : 'px-2.5 py-1 text-xs'} {variantClasses} {customClass}"
 >
 	{#if dot}
 		<span class="w-1.5 h-1.5 rounded-full mr-1.5 {dotColor}"></span>

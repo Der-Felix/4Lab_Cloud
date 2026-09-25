@@ -266,21 +266,20 @@ test.describe('Dashboard Layout & Farboptimierung V2 E2E', () => {
 		await expect(page.locator('text=Öffentlich').first()).toBeVisible();
 		await expect(page.locator('text=Passwortgeschützt')).toBeVisible();
 
-		// Speicherplatz mit echter Quota-Prozentzahl
+		// Speicherplatz als Kennzahl-Kachel: Beleg und Kontingent stehen jetzt in einer Zeile
 		await expect(page.locator('text=Speicherplatz')).toBeVisible();
 		await expect(page.locator('text=4.7%')).toBeVisible();
-		await expect(page.locator('text=2.3 GB belegt')).toBeVisible();
-		await expect(page.locator('text=von 50 GB')).toBeVisible();
+		await expect(page.locator('text=2.3 GB von 50 GB')).toBeVisible();
 
-		// Karte "Aktivitaet" pruefen
-		await expect(page.locator('text=Aktivität')).toBeVisible();
+		// Karte "Letzte Aktivitaet" pruefen. Nicht auf "Aktivität" allein pruefen -
+		// das trifft auch die gleichnamige Kennzahl-Kachel und verletzt den Strict Mode.
+		await expect(page.locator('text=Letzte Aktivität')).toBeVisible();
 		await expect(page.locator('text=Datei hochgeladen')).toBeVisible();
 		await expect(page.locator('text=Freigabe erstellt')).toBeVisible();
 		await expect(page.locator('text=Erfolgreich angemeldet')).toBeVisible();
 
-		// 4. Sicherheits-Status pruefen
-		await expect(page.locator('text=BSI TR-02102-2 & DSGVO konform')).toBeVisible();
-		await expect(page.locator('text=AES-256-GCM at rest')).toBeVisible();
+		// 4. Die Compliance-Badges ("BSI TR-02102-2 & DSGVO konform", "AES-256-GCM at rest")
+		// wurden bewusst aus dem Dashboard entfernt - hier gibt es nichts mehr zu pruefen.
 
 		// 5. Dark Mode Screenshot erstellen (dashboard-v2-dark.png und dashboard-dark.png)
 		await page.waitForTimeout(500);
@@ -386,5 +385,65 @@ test.describe('Dashboard Layout & Farboptimierung V2 E2E', () => {
 
 		// Screenshot: docs/screenshots/sidebar-collapsed.png
 		await page.screenshot({ path: `${SCREENSHOT_DIR}/sidebar-collapsed.png`, fullPage: true });
+	});
+
+	test('Sidebar auf schmalem Viewport: eingeklappt, ohne irrefuehrenden Schalter', async ({ page }) => {
+		setupAuthenticatedRoutes(page);
+		// 390px entspricht einem gaengigen Telefon-Viewport
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto('/');
+		await page.waitForTimeout(400);
+
+		const aside = page.locator('aside');
+		await expect(aside).toBeVisible();
+
+		// Unterhalb md erzwingt isNarrow den eingeklappten Zustand (64px statt 240px).
+		const width = await aside.evaluate((el) => Math.round(el.getBoundingClientRect().width));
+		expect(width).toBeLessThanOrEqual(80);
+
+		// Der Schalter darf hier nicht erscheinen: er koennte den versprochenen Zustand
+		// nicht herstellen und wuerde nur die Desktop-Praeferenz veraendern.
+		await expect(page.locator('button[title="Sidebar ausklappen"]')).toBeHidden();
+		await expect(page.locator('button[title="Sidebar einklappen"]')).toBeHidden();
+
+		// Der Kopfbereich darf nicht ueberlaufen. Die rechte Kante des <header> selbst
+		// genuegt als Pruefung NICHT: die Hauptspalte setzt overflow-x-hidden, dadurch
+		// bleibt der Header im Viewport, waehrend seine Kinder darueber hinausragen und
+		// unerreichbar abgeschnitten werden - genau der urspruengliche Fehler.
+		const overflow = await page.locator('header').evaluate((el) => {
+			const vw = document.documentElement.clientWidth;
+			let maxRight = 0;
+			let worst = '';
+			for (const child of el.querySelectorAll('*')) {
+				const cs = getComputedStyle(child);
+				if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+				if (!child.getClientRects().length) continue;
+				const right = child.getBoundingClientRect().right;
+				if (right > maxRight) {
+					maxRight = right;
+					worst = child.tagName.toLowerCase() + '.' + String(child.className).slice(0, 40);
+				}
+			}
+			return { vw, maxRight: Math.round(maxRight), worst };
+		});
+		expect(
+			overflow.maxRight,
+			`Element ragt aus dem Viewport: ${overflow.worst} (rechte Kante ${overflow.maxRight} > ${overflow.vw})`
+		).toBeLessThanOrEqual(overflow.vw);
+	});
+
+	test('Anpassen-Schalter melden ihren Zustand an Screenreader', async ({ page }) => {
+		setupAuthenticatedRoutes(page);
+		await page.setViewportSize({ width: 1440, height: 900 });
+		await page.goto('/');
+		await page.getByRole('button', { name: 'Dashboard anpassen' }).click();
+
+		// Der Zustand darf nicht nur gezeichnet sein: ohne aria-pressed ist fuer
+		// Screenreader nicht erkennbar, welche Bereiche sichtbar sind.
+		const kennzahlen = page.getByRole('button', { name: 'Kennzahlen' });
+		await expect(kennzahlen).toHaveAttribute('aria-pressed', 'true');
+
+		await kennzahlen.click();
+		await expect(kennzahlen).toHaveAttribute('aria-pressed', 'false');
 	});
 });

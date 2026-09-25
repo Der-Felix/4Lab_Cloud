@@ -169,11 +169,11 @@
 									{#if item.user_email}
 										<span class="font-medium">{item.user_email}</span>
 									{:else if item.pseudonym_hash}
-										<span class="font-mono text-[11px] text-muted-light dark:text-muted-dark" title={`Pseudonym: ${item.pseudonym_hash}`}>
+										<span class="font-mono text-2xs text-muted-light dark:text-muted-dark" title={`Pseudonym: ${item.pseudonym_hash}`}>
 											anon_{item.pseudonym_hash.substring(0, 10)}...
 										</span>
 									{:else if item.user_id}
-										<span class="font-mono text-[11px] text-muted-light dark:text-muted-dark">
+										<span class="font-mono text-2xs text-muted-light dark:text-muted-dark">
 											{item.user_id.substring(0, 8)}...
 										</span>
 									{:else}

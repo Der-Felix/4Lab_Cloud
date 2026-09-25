@@ -187,8 +187,8 @@
 		<p class="font-bold text-xs text-text-light dark:text-text-dark truncate leading-tight group-hover:text-primary transition-colors" title={file.filename}>
 			{file.filename}
 		</p>
-		<p class="text-[11px] text-muted-light dark:text-muted-dark mt-1.5 flex items-center gap-1.5">
-			<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold {typeInfo.badgeClass}">{typeInfo.label}</span>
+		<p class="text-2xs text-muted-light dark:text-muted-dark mt-1.5 flex items-center gap-1.5">
+			<span class="px-1.5 py-0.5 rounded text-3xs font-semibold {typeInfo.badgeClass}">{typeInfo.label}</span>
 			<span>·</span>
 			<span class="tabular-nums">{formatRelativeTime(file.created_at)}</span>
 		</p>

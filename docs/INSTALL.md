@@ -1,0 +1,305 @@
+# Installationsanleitung
+
+Diese Anleitung führt Schritt für Schritt durch die Einrichtung einer eigenen
+4LabCloud-Instanz. Sie richtet sich an Anwender und Administratoren, die die Plattform
+selbst betreiben möchten. Für die Mitarbeit am Quelltext siehe
+[DEVELOPMENT.md](DEVELOPMENT.html).
+
+---
+
+## 1. Voraussetzungen
+
+**Server**
+
+- Linux-Server mit installiertem `podman` und `podman-compose`
+- Mindestens 2 CPU-Kerne und 4 GB RAM. Für Reverse-Geocoding mit eigener
+  Nominatim-Instanz deutlich mehr – dazu Abschnitt 7.
+- Speicherplatz nach Bedarf: Die Nutzdaten liegen in Podman-Volumes.
+
+**Netzwerk**
+
+- Eine Domain, deren A-/AAAA-Record auf den Server zeigt
+- Die Ports **80** und **443** müssen von außen erreichbar sein
+
+**Wichtig:** Alle Dienste außer dem Nginx-Gateway laufen in einem internen Netzwerk und
+sind von außen nicht erreichbar. Die Datenbank wird bewusst **nicht** nach außen
+veröffentlicht.
+
+---
+
+## 2. Quelltext beziehen
+
+```bash
+git clone https://github.com/Der-Felix/4Lab_Cloud.git
+cd 4Lab_Cloud
+```
+
+---
+
+## 3. TLS-Zertifikate beziehen
+
+4LabCloud erzwingt TLS 1.3. Für den Produktivbetrieb werden echte Zertifikate benötigt:
+
+```bash
+sudo certbot certonly --standalone -d cloud.example.com
+```
+
+Die Zertifikate liegen anschließend unter
+`/etc/letsencrypt/live/cloud.example.com/`. Die Produktions-Compose-Datei erwartet sie
+dort; `DOMAIN` in der Konfiguration muss exakt diesem Verzeichnisnamen entsprechen.
+
+> Im Entwicklungsmodus liegt stattdessen ein selbstsigniertes Zertifikat unter
+> `deploy/podman/certs/`. Das ist für den Produktivbetrieb ungeeignet.
+
+---
+
+## 4. Konfiguration anlegen
+
+```bash
+cp .env.prod.example .env
+```
+
+**Alle Geheimnisse müssen ersetzt werden.** Die Beispielwerte sind öffentlich bekannt und
+dürfen niemals produktiv verwendet werden. Passende Werte erzeugen:
+
+```bash
+openssl rand -hex 32     # SERVICE_TOKEN, JWT_SECRET
+openssl rand -base64 32  # STORAGE_KEY, MFA_KEY, AUDIT_HMAC_KEY
+openssl rand -base64 24  # POSTGRES_PASSWORD, REDIS_PASSWORD
+```
+
+Anschließend `DOMAIN` auf die eigene Domain setzen.
+
+> **`STORAGE_KEY` sichern.** Damit werden alle Dateien verschlüsselt. Geht er verloren,
+> sind die gespeicherten Daten unwiederbringlich verloren – es gibt keine Hintertür.
+> Gleiches gilt für `MFA_KEY` bezüglich hinterlegter Zwei-Faktor-Geheimnisse.
+
+Eine vollständige Beschreibung aller Variablen steht in der
+[README](https://github.com/Der-Felix/4Lab_Cloud/blob/main/README.md#umgebungsvariablen).
+
+> **Jetzt ueber Geocoding entscheiden.** `.env.prod.example` setzt
+> `GEOCODING_ENABLED=true`, der Nominatim-Dienst startet aber nur mit einem
+> zusaetzlichen Compose-Profil. Legen Sie die Variante gemaess
+> [Abschnitt 8](#8-reverse-geocoding-aktivieren-oder-bewusst-abschalten) **vor dem
+> ersten Start** fest. Eine spaetere Aenderung der `.env` wirkt erst nach einem
+> Neustart des Upload-Service.
+
+---
+
+## 5. Zugang fuer den Erststart einschraenken
+
+> **Kritisch:** Der erste registrierte Benutzer erhaelt Administratorrechte.
+> Nginx veroeffentlicht die Ports **80 und 443**, sobald der Stack laeuft. Zwischen
+> dem Start und Ihrer eigenen Registrierung kann jeder, der die Adresse kennt, den
+> Administrator-Account anlegen. Schliessen Sie dieses Zeitfenster, bevor Sie starten.
+
+Beschraenken Sie den Zugriff auf Ihre eigene IP-Adresse, zum Beispiel mit `ufw`:
+
+```bash
+sudo ufw allow from <IHRE-IP> to any port 80 proto tcp
+sudo ufw allow from <IHRE-IP> to any port 443 proto tcp
+sudo ufw deny 80/tcp
+sudo ufw deny 443/tcp
+sudo ufw enable
+```
+
+Alternativ mit `nftables`/`iptables` oder, falls vorhanden, in der Firewall Ihres
+Hosters. Entscheidend ist nur, dass **vor** dem ersten Start niemand sonst die
+Anwendung erreicht.
+
+---
+
+## 6. Starten
+
+```bash
+cd ~/4Lab_Cloud/deploy/podman/prod        # Pfad ggf. anpassen
+podman-compose --env-file ../../../.env -f docker-compose.prod.yml up -d
+```
+
+Status prüfen:
+
+```bash
+podman ps
+```
+
+Alle Container sollten `healthy` melden. Die Anwendung ist nun unter
+`https://cloud.example.com` erreichbar.
+
+---
+
+## 7. Administrator anlegen und freigeben
+
+Der **erste registrierte Benutzer wird automatisch Administrator**. Danach ist die freie
+Selbstregistrierung geschlossen; weitere Benutzer werden per Einladung angelegt.
+
+Deshalb: Registrieren Sie sich unmittelbar nach dem ersten Start selbst, bevor die Instanz
+öffentlich erreichbar ist.
+
+Empfohlene erste Schritte:
+
+1. Konto anlegen (wird Administrator)
+2. Unter *Einstellungen → Sicherheit* die Zwei-Faktor-Authentifizierung aktivieren
+3. Unter *Einstellungen → Datenschutz* entscheiden, ob GPS-Daten aus Fotos gespeichert
+   werden sollen. Standard ist aktiviert; bei Deaktivierung werden Koordinaten vor dem
+   Speichern entfernt und lassen sich später nicht rekonstruieren.
+
+**Erst danach** den Zugang oeffnen:
+
+```bash
+sudo ufw delete deny 80/tcp
+sudo ufw delete deny 443/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
+
+Ab diesem Zeitpunkt ist die Selbstregistrierung geschlossen; weitere Benutzer
+entstehen ausschliesslich ueber Einladungen.
+
+---
+
+## 8. Reverse-Geocoding: aktivieren oder bewusst abschalten
+
+> **Wichtig:** `.env.prod.example` setzt `GEOCODING_ENABLED=true`, der
+> Nominatim-Container startet aber **nur** mit dem Compose-Profil `geocoding`.
+> Wer die kopierte Vorlage unverändert übernimmt und ohne dieses Profil startet,
+> betreibt die Instanz mit aktiviertem Geocoding **ohne** den zugehörigen Dienst.
+> Uploads mit GPS-Koordinaten laufen dann in eine vergebliche Anfrage; der Upload
+> selbst gelingt, der Ortsname bleibt jedoch leer und wird **nicht automatisch
+> nachgeholt**.
+
+Entscheiden Sie sich daher vor dem ersten Start für eine der beiden Varianten.
+
+**Variante A – ohne Ortsnamen (empfohlen für den Einstieg)**
+
+In der Konfiguration setzen:
+
+```bash
+GEOCODING_ENABLED=false
+```
+
+Alles andere funktioniert unverändert, Fotos erhalten lediglich keine Ortsnamen.
+
+**Variante B – mit eigener Nominatim-Instanz**
+
+4LabCloud nutzt eine **selbst gehostete** Instanz; es werden keine Koordinaten an
+Dritte übertragen. `GEOCODING_ENABLED=true` belassen und den Stack **mit** dem
+Profil starten:
+
+```bash
+cd ~/4Lab_Cloud/deploy/podman/prod        # Pfad ggf. anpassen
+podman-compose --env-file ../../../.env -f docker-compose.prod.yml \
+  --profile geocoding up -d
+```
+
+Das Profil muss bei **jedem** Start und Update mit angegeben werden, sonst fehlt
+der Dienst erneut.
+
+> **Planen Sie Zeit und Platz ein.** Der Container importiert beim ersten Start einen
+> OSM-Datenauszug (`NOMINATIM_PBF_URL`). Der Standardwert in `.env.prod.example` ist
+> **Deutschland** – dieser Import dauert je nach Hardware mehrere Stunden und belegt
+> zweistellige Gigabyte. Zum Ausprobieren empfiehlt sich zunächst ein kleiner Auszug:
+>
+> ```bash
+> NOMINATIM_PBF_URL=https://download.geofabrik.de/europe/monaco-latest.osm.pbf
+> ```
+>
+> Ein Wechsel des Auszugs erfordert einen erneuten Import.
+
+---
+
+## 9. Backups einrichten
+
+Ein Backup ist erst dann eines, wenn die Wiederherstellung getestet wurde.
+
+Alle folgenden Befehle werden im **Wurzelverzeichnis des Repositorys** ausgeführt:
+
+```bash
+cd ~/4Lab_Cloud          # Pfad ggf. anpassen
+./scripts/backup.sh
+```
+
+Für regelmäßige Sicherungen einen Cron-Eintrag anlegen (Beispiel: täglich 02:00 Uhr):
+
+```bash
+crontab -e
+# 0 2 * * * /pfad/zu/4Lab_Cloud/scripts/backup.sh
+```
+
+Gesichert werden Datenbank und Storage-Volumes. Details, Rotation und die
+Wiederherstellung über `scripts/restore.sh` stehen in
+[BACKUP.html](BACKUP.html).
+
+---
+
+## 10. Aktualisieren
+
+```bash
+cd ~/4Lab_Cloud          # Pfad ggf. anpassen
+git pull
+cd deploy/podman/prod
+podman-compose --env-file ../../../.env -f docker-compose.prod.yml build
+podman-compose --env-file ../../../.env -f docker-compose.prod.yml up -d --force-recreate
+```
+
+> Bei **Variante B** (Geocoding aktiv) muss `--profile geocoding` bei *jedem*
+> Aufruf mit angegeben werden - auch hier beim Update. Fehlt es, laeuft die
+> Instanz anschliessend mit aktiviertem Geocoding ohne Nominatim-Dienst.
+
+**Vor dem Update ein Backup anlegen.**
+
+**Datenbankmigrationen laufen nicht automatisch.** Sie werden weder beim Start noch beim
+Update angewendet: `init.sql` greift ausschließlich bei einer leeren Datenbank. Prüfen Sie
+nach einem Update, ob unter `deploy/postgres/migrations/` neue Dateien hinzugekommen sind,
+und spielen Sie diese ein:
+
+```bash
+cd ~/4Lab_Cloud          # Pfad ggf. anpassen
+
+# .env in die aktuelle Shell laden. podman-compose --env-file reicht die Werte nur
+# an Compose weiter, nicht an Ihre Shell - ohne diesen Schritt sind die Variablen leer.
+set -a && . ./.env && set +a
+
+podman exec -i 4labs-prod-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  < deploy/postgres/migrations/<datei>.sql
+```
+
+> Der Container heisst im Produktionsbetrieb `4labs-prod-postgres`. Im Entwicklungsmodus
+> lautet der Name `4labs-postgres` – die Compose-Dateien vergeben unterschiedliche Namen.
+
+Der Änderungsverlauf steht im
+[Changelog](https://github.com/Der-Felix/4Lab_Cloud/blob/main/CHANGELOG.md).
+
+---
+
+## 11. Fehlerbehebung
+
+| Symptom | Ursache und Lösung |
+|---|---|
+| Browser warnt vor dem Zertifikat | Im Entwicklungsmodus normal (selbstsigniert). Produktiv: Certbot-Zertifikate und korrekte `DOMAIN` prüfen. |
+| Anmeldung antwortet `429` | Rate-Limiter: 5 Versuche pro Minute und IP, 10 pro Stunde und E-Mail. Kurz warten. |
+| Container startet nicht | Logs ansehen: `podman logs 4labs-prod-app-server`. Häufigste Ursache sind fehlende oder unvollständige Werte in der Konfiguration. |
+| Fotos ohne Ortsnamen | Geocoding ist deaktiviert (Standard) oder Nominatim läuft nicht – siehe Abschnitt 7. |
+| Karte bleibt leer | Keine Fotos mit GPS-Koordinaten vorhanden, oder GPS-Speicherung ist deaktiviert. Bereits ohne Koordinaten gespeicherte Fotos lassen sich nicht nachträglich verorten. |
+| Spalten fehlen nach einem Update | Migration nicht eingespielt – siehe Abschnitt 9. |
+
+Eine ausführlichere Tabelle steht in der
+[README](https://github.com/Der-Felix/4Lab_Cloud/blob/main/README.md#fehlerbehebung).
+
+---
+
+## 12. Deinstallation
+
+```bash
+cd ~/4Lab_Cloud/deploy/podman/prod        # Pfad ggf. anpassen
+podman-compose --env-file ../../../.env -f docker-compose.prod.yml down
+```
+
+Die Volumes bleiben dabei erhalten. **Nur wenn Sie sämtliche Daten unwiderruflich
+löschen möchten**, zusätzlich `-v` anhängen:
+
+```bash
+podman-compose --env-file ../../../.env -f docker-compose.prod.yml down -v
+```
+
+Das entfernt Datenbank, hochgeladene Dateien und Thumbnails endgültig. Legen Sie vorher
+ein Backup an, falls Sie die Daten noch benötigen könnten.

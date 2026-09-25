@@ -205,14 +205,14 @@
 					<CheckCircle2 class="w-4 h-4" />
 					<span>Einladungslink erfolgreich erstellt</span>
 				</p>
-				<p class="text-[11px] text-muted-light dark:text-muted-dark">
+				<p class="text-2xs text-muted-light dark:text-muted-dark">
 					Dieser Link wird aus Sicherheitsgründen nur <strong>einmal</strong> angezeigt. Bitte leiten Sie ihn direkt an
 					<strong>{createdInvite.email}</strong> weiter.
 				</p>
 			</div>
 
 			<div class="space-y-1.5">
-				<label class="text-[11px] font-medium text-muted-light dark:text-muted-dark" for="invite-url-field">
+				<label class="text-2xs font-medium text-muted-light dark:text-muted-dark" for="invite-url-field">
 					Registrierungs-URL:
 				</label>
 				<div class="flex gap-2">
